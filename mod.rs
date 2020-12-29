@@ -41,9 +41,9 @@ macro_rules! print_arr {
 
 macro_rules! scanf {
     ( $instr:expr, $fmt:expr, $($($args:tt)::*),* ) => {
-        {
-            let mut res = scan_fmt::parse::scan( $instr, $fmt ) ;
-            ($(scan_fmt::scan_fmt_help!(wrap res,$($args)::*).unwrap_or_else(|| panic!("Failed to parse {}", stringify!($expr)))),*)
+        match scan_fmt!($instr, $fmt, $($($args)::*),*) {
+            Ok(res) => res,
+            Err(err) => panic!("Failed to parse {:?}: {:?}", $instr, err)
         }
     };
 }
