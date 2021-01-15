@@ -166,10 +166,19 @@ pub fn rotate_grid_clock<T>(grid: &mut [Vec<T>]) {
             let mut a = (i, j);
             for _ in 0..3 {
                 let b = (w - a.1 - 1, a.0);
-                // SAFETY: trust me, i tested this once in the Rust Playground
-                unsafe { swap(transmute(&mut grid[a.0][a.1]), &mut grid[b.0][b.1]) };
+                swap_2d(grid, a, b);
                 a = b;
             }
         }
+    }
+}
+
+fn swap_2d<T>(arr: &mut [Vec<T>], a: (usize, usize), b: (usize, usize)) {
+    if a.0 == b.0 {
+        arr.get_mut(a.0).unwrap().swap(a.1, b.1);
+    } else {
+        let (min, max) = if a.0 < b.0 { (a, b) } else { (b, a) };
+        let (front, back) = arr.split_at_mut(max.0);
+        std::mem::swap(&mut front[min.0][min.1], &mut back[0][max.1])
     }
 }
