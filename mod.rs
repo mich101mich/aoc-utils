@@ -1,21 +1,18 @@
 #![allow(unused)]
+#![allow(clippy::wrong_self_convention)]
 
 pub use rand::prelude::*;
 pub use rayon::prelude::*;
 pub use regex::Regex;
-pub use std::{
-    collections::{HashMap, HashSet, VecDeque},
-    convert::TryInto,
-    io::Write,
-    str::FromStr,
-};
+pub use sscanf::*;
+pub use std::collections::{HashMap, HashSet, VecDeque};
+pub use std::io::Write;
+pub use std::str::FromStr;
 
 mod neighbors;
 pub use neighbors::*;
 mod path;
 pub use path::*;
-mod dir;
-pub use dir::*;
 
 use std::cmp::Eq;
 use std::hash::Hash;
@@ -44,15 +41,6 @@ macro_rules! print_arr {
     };
 }
 
-macro_rules! scanf {
-    ( $instr:expr, $fmt:expr, $($($args:tt)::*),* ) => {
-        match scan_fmt!($instr, $fmt, $($($args)::*),*) {
-            Ok(res) => res,
-            Err(err) => panic!("Failed to parse {:?}: {:?}", $instr, err)
-        }
-    };
-}
-
 pub fn parse_u(input: &str) -> usize {
     usize::from_str(input).unwrap_or_else(|_| panic!("cannot parse >{}<", input))
 }
@@ -60,11 +48,34 @@ pub fn parse(input: &str) -> isize {
     isize::from_str(input).unwrap_or_else(|_| panic!("cannot parse >{}<", input))
 }
 pub fn parse_c(input: char) -> usize {
-    if input >= '0' && input <= '9' {
+    if ('0'..='9').contains(&input) {
         (input as u8 - b'0') as usize
     } else {
         panic!("{} is not a number", input)
     }
+}
+
+pub fn hashtag_line(input: &str) -> Vec<bool> {
+    dotted_line(input, '#')
+}
+pub fn dotted_line(input: &str, non_dot: char) -> Vec<bool> {
+    input.chars().map(|c| c == non_dot).to_vec()
+}
+pub fn hashtag_grid(input: &str) -> Vec<Vec<bool>> {
+    dotted_grid(input, '#')
+}
+pub fn dotted_grid(input: &str, non_dot: char) -> Vec<Vec<bool>> {
+    input
+        .lines()
+        .map(|line| dotted_line(line, non_dot))
+        .to_vec()
+}
+
+pub fn comma_values<T: FromStr>(input: &str) -> Vec<T> {
+    input
+        .split(',')
+        .filter_map(|s| s.parse::<T>().ok())
+        .to_vec()
 }
 
 pub trait IterExt<T> {
@@ -166,19 +177,87 @@ pub fn rotate_grid_clock<T>(grid: &mut [Vec<T>]) {
             let mut a = (i, j);
             for _ in 0..3 {
                 let b = (w - a.1 - 1, a.0);
-                swap_2d(grid, a, b);
+                // SAFETY: trust me, i tested this once in the Rust Playground
+                unsafe { swap(transmute(&mut grid[a.0][a.1]), &mut grid[b.0][b.1]) };
                 a = b;
             }
         }
     }
 }
 
-fn swap_2d<T>(arr: &mut [Vec<T>], a: (usize, usize), b: (usize, usize)) {
-    if a.0 == b.0 {
-        arr.get_mut(a.0).unwrap().swap(a.1, b.1);
-    } else {
-        let (min, max) = if a.0 < b.0 { (a, b) } else { (b, a) };
-        let (front, back) = arr.split_at_mut(max.0);
-        std::mem::swap(&mut front[min.0][min.1], &mut back[0][max.1])
+#[derive(Clone, Copy, PartialEq, Eq, Debug, Hash)]
+pub enum Dir {
+    Up,
+    Right,
+    Down,
+    Left,
+}
+pub use Dir::*;
+
+impl Dir {
+    pub fn clockwise(self) -> Dir {
+        ((self.num() + 1) % 4).into()
+    }
+    pub fn counter_clockwise(self) -> Dir {
+        ((self.num() + 3) % 4).into()
+    }
+    pub fn opposite(self) -> Dir {
+        ((self.num() + 2) % 4).into()
+    }
+    pub fn num(self) -> usize {
+        self.into()
+    }
+    pub fn all() -> std::iter::Copied<std::slice::Iter<'static, Dir>> {
+        [Up, Right, Down, Left].iter().copied()
+    }
+    pub fn as_delta(self) -> (isize, isize) {
+        [(0, -1), (1, 0), (0, 1), (-1, 0)][self.num()]
+    }
+    pub fn checked_add(self, pos: (usize, usize)) -> Option<(usize, usize)> {
+        let delta = self.as_delta();
+        let ret = ((pos.0 as isize + delta.0), (pos.1 as isize + delta.1));
+        if ret.0 < 0 || ret.1 < 0 {
+            None
+        } else {
+            Some((ret.0 as usize, ret.1 as usize))
+        }
     }
 }
+
+macro_rules! impl_dir_ops {
+    ($($type:ty),+) => {$(
+        impl From<$type> for Dir {
+            fn from(val: $type) -> Dir {
+                match val {
+                    0 => Up,
+                    1 => Right,
+                    2 => Down,
+                    3 => Left,
+                    n => panic!("Invalid Dir value: {}", n),
+                }
+            }
+        }
+        impl Into<$type> for Dir {
+            fn into(self) -> $type {
+                self as $type
+            }
+        }
+        impl Add<Dir> for ($type, $type) {
+            type Output = Self;
+            fn add(self, other: Dir) -> Self {
+                let delta = other.as_delta();
+                (
+                    (self.0 as isize + delta.0) as $type,
+                    (self.1 as isize + delta.1) as $type,
+                )
+            }
+        }
+        impl AddAssign<Dir> for ($type, $type) {
+            fn add_assign(&mut self, other: Dir) {
+                *self = *self + other;
+            }
+        }
+    )+}
+}
+
+impl_dir_ops!(u8, u16, u32, u64, usize, i8, i16, i32, i64, isize);
