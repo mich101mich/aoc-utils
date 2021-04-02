@@ -13,6 +13,10 @@ mod neighbors;
 pub use neighbors::*;
 mod path;
 pub use path::*;
+mod dir;
+pub use dir::*;
+mod int_code;
+pub use int_code::*;
 
 use std::cmp::Eq;
 use std::hash::Hash;
@@ -184,80 +188,3 @@ pub fn rotate_grid_clock<T>(grid: &mut [Vec<T>]) {
         }
     }
 }
-
-#[derive(Clone, Copy, PartialEq, Eq, Debug, Hash)]
-pub enum Dir {
-    Up,
-    Right,
-    Down,
-    Left,
-}
-pub use Dir::*;
-
-impl Dir {
-    pub fn clockwise(self) -> Dir {
-        ((self.num() + 1) % 4).into()
-    }
-    pub fn counter_clockwise(self) -> Dir {
-        ((self.num() + 3) % 4).into()
-    }
-    pub fn opposite(self) -> Dir {
-        ((self.num() + 2) % 4).into()
-    }
-    pub fn num(self) -> usize {
-        self.into()
-    }
-    pub fn all() -> std::iter::Copied<std::slice::Iter<'static, Dir>> {
-        [Up, Right, Down, Left].iter().copied()
-    }
-    pub fn as_delta(self) -> (isize, isize) {
-        [(0, -1), (1, 0), (0, 1), (-1, 0)][self.num()]
-    }
-    pub fn checked_add(self, pos: (usize, usize)) -> Option<(usize, usize)> {
-        let delta = self.as_delta();
-        let ret = ((pos.0 as isize + delta.0), (pos.1 as isize + delta.1));
-        if ret.0 < 0 || ret.1 < 0 {
-            None
-        } else {
-            Some((ret.0 as usize, ret.1 as usize))
-        }
-    }
-}
-
-macro_rules! impl_dir_ops {
-    ($($type:ty),+) => {$(
-        impl From<$type> for Dir {
-            fn from(val: $type) -> Dir {
-                match val {
-                    0 => Up,
-                    1 => Right,
-                    2 => Down,
-                    3 => Left,
-                    n => panic!("Invalid Dir value: {}", n),
-                }
-            }
-        }
-        impl Into<$type> for Dir {
-            fn into(self) -> $type {
-                self as $type
-            }
-        }
-        impl Add<Dir> for ($type, $type) {
-            type Output = Self;
-            fn add(self, other: Dir) -> Self {
-                let delta = other.as_delta();
-                (
-                    (self.0 as isize + delta.0) as $type,
-                    (self.1 as isize + delta.1) as $type,
-                )
-            }
-        }
-        impl AddAssign<Dir> for ($type, $type) {
-            fn add_assign(&mut self, other: Dir) {
-                *self = *self + other;
-            }
-        }
-    )+}
-}
-
-impl_dir_ops!(u8, u16, u32, u64, usize, i8, i16, i32, i64, isize);

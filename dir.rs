@@ -78,6 +78,10 @@ impl From<char> for Dir {
     }
 }
 
+impl sscanf::RegexRepresentation for Dir {
+    const REGEX: &'static str = "[Uu]p|[Dd]own|[Ll]eft|[Rr]ight|[NnUuEeRrSsDdEeLl]";
+}
+
 macro_rules! impl_dir_ops {
     ($($type:ty),+) => {$(
         impl From<$type> for Dir {
