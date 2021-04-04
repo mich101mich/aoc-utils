@@ -39,6 +39,21 @@ impl Dir {
             Some((ret.0 as usize, ret.1 as usize))
         }
     }
+    pub fn from_difference(from: (isize, isize), to: (isize, isize)) -> Dir {
+        let axis_0 = to.0 - from.0;
+        let axis_1 = to.1 - from.1;
+        if axis_0.abs() > axis_1.abs() {
+            if axis_0 > 0 {
+                Dir::Right
+            } else {
+                Dir::Left
+            }
+        } else if axis_1 > 0 {
+            Dir::Down
+        } else {
+            Dir::Up
+        }
+    }
 }
 
 impl FromStr for Dir {

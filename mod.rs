@@ -75,6 +75,96 @@ pub fn dotted_grid(input: &str, non_dot: char) -> Vec<Vec<bool>> {
         .to_vec()
 }
 
+pub fn print_hashtag_grid(grid: &[Vec<bool>]) {
+    for row in grid {
+        for c in row {
+            print!("{}", if *c { '#' } else { '.' })
+        }
+        println!();
+    }
+    println!();
+}
+
+pub fn in_grid_bounds((x, y): (isize, isize), (w, h): (usize, usize)) -> bool {
+    x >= 0 && y >= 0 && x < w as isize && y < h as isize
+}
+pub fn map_grid_bounds((x, y): (isize, isize), (w, h): (usize, usize)) -> Option<(usize, usize)> {
+    if x < 0 || y < 0 || x >= w as isize || y >= h as isize {
+        return None;
+    }
+    Some((x as usize, y as usize))
+}
+
+pub fn grid_iterator((w, h): (usize, usize)) -> impl Iterator<Item = (usize, usize)> {
+    (0..w).flat_map(move |x| (0..h).map(move |y| (x, y)))
+}
+
+pub fn square_ring_delta_iterator(
+    (x, y): (usize, usize),
+    radius: usize,
+    size: (usize, usize),
+) -> impl Iterator<Item = ((usize, usize), (isize, isize))> {
+    let radius = radius as isize;
+    let x = x as isize;
+    let y = y as isize;
+    (-radius..=radius)
+        .map(move |dx| (dx, -radius))
+        .chain((-radius + 1..radius).map(move |dy| (-radius, dy)))
+        .chain((-radius + 1..radius).map(move |dy| (radius, dy)))
+        .chain((-radius..=radius).map(move |dx| (dx, radius)))
+        .filter_map(move |(dx, dy)| map_grid_bounds((x + dx, y + dy), size).map(|p| (p, (dx, dy))))
+}
+pub fn square_ring_iterator(
+    pos: (usize, usize),
+    radius: usize,
+    size: (usize, usize),
+) -> impl Iterator<Item = (usize, usize)> {
+    square_ring_delta_iterator(pos, radius, size).map(|(p, _)| p)
+}
+
+pub fn trim_grid<T>(
+    grid: &mut Vec<Vec<T>>,
+    mut empty: impl FnMut(&T) -> bool,
+) -> (usize, usize, usize, usize) {
+    let mut top = 0;
+    while top < grid.len() && grid[top].iter().all(|x| empty(x)) {
+        top += 1;
+    }
+    grid.splice(..top, std::iter::empty());
+    if grid.is_empty() {
+        return (top, 0, 0, 0);
+    }
+
+    let mut bottom = 0;
+    while grid.last().unwrap().iter().all(|x| empty(x)) {
+        grid.pop();
+        bottom += 1;
+    }
+
+    let mut left = 0;
+    while grid
+        .iter()
+        .all(|r| r.get(left).map(|x| empty(x)).unwrap_or(false))
+    {
+        left += 1;
+    }
+    grid.iter_mut().for_each(|r| {
+        r.splice(..left, std::iter::empty());
+    });
+
+    let mut right = 0;
+    while grid
+        .iter()
+        .all(|r| r.last().map(|x| empty(x)).unwrap_or(false))
+    {
+        grid.iter_mut().for_each(|r| {
+            r.pop();
+        });
+        right += 1;
+    }
+    (top, bottom, left, right)
+}
+
 pub fn comma_values<T: FromStr>(input: &str) -> Vec<T> {
     input
         .split(',')
