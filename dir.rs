@@ -84,17 +84,17 @@ impl From<&'_ str> for Dir {
 impl From<char> for Dir {
     fn from(c: char) -> Self {
         match c {
-            'N' | 'n' | 'U' | 'u' => Dir::Up,
-            'E' | 'e' | 'R' | 'r' => Dir::Right,
-            'S' | 's' | 'D' | 'd' => Dir::Down,
-            'W' | 'w' | 'L' | 'l' => Dir::Left,
+            'N' | 'n' | 'U' | 'u' | '^' => Dir::Up,
+            'E' | 'e' | 'R' | 'r' | '>' => Dir::Right,
+            'S' | 's' | 'D' | 'd' | 'v' => Dir::Down,
+            'W' | 'w' | 'L' | 'l' | '<' => Dir::Left,
             c => panic!("Not a Dir: '{}'", c),
         }
     }
 }
 
 impl sscanf::RegexRepresentation for Dir {
-    const REGEX: &'static str = "[Uu]p|[Dd]own|[Ll]eft|[Rr]ight|[NnUuEeRrSsDdEeLl]";
+    const REGEX: &'static str = "[Uu]p|[Dd]own|[Ll]eft|[Rr]ight|[NnUuEeRrSsDdEeLl^>v<]";
 }
 
 macro_rules! impl_dir_ops {
@@ -110,9 +110,9 @@ macro_rules! impl_dir_ops {
                 }
             }
         }
-        impl Into<$type> for Dir {
-            fn into(self) -> $type {
-                self as $type
+        impl From<Dir> for $type {
+            fn from(dir: Dir) -> $type {
+                dir as $type
             }
         }
         impl Add<Dir> for ($type, $type) {
@@ -128,6 +128,21 @@ macro_rules! impl_dir_ops {
         impl AddAssign<Dir> for ($type, $type) {
             fn add_assign(&mut self, other: Dir) {
                 *self = *self + other;
+            }
+        }
+        impl Sub<Dir> for ($type, $type) {
+            type Output = Self;
+            fn sub(self, other: Dir) -> Self {
+                let delta = other.as_delta();
+                (
+                    (self.0 as isize - delta.0) as $type,
+                    (self.1 as isize - delta.1) as $type,
+                )
+            }
+        }
+        impl SubAssign<Dir> for ($type, $type) {
+            fn sub_assign(&mut self, other: Dir) {
+                *self = *self - other;
             }
         }
     )+}

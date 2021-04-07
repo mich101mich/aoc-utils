@@ -1,7 +1,7 @@
 #![allow(unused)]
 //! A crate with the most common Neighborhoods
 
-type Point = (usize, usize);
+pub type Point = (usize, usize);
 use std::fmt::Debug;
 
 /// Defines how a Path can move along the Grid.

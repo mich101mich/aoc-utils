@@ -48,21 +48,32 @@ where
     vector.insert(b, element);
 }
 
-pub fn a_star_search<Id, GetNeighbors, NeighborIter, GetCost, IsWalkable, Heuristic>(
-    get_all_neighbors: GetNeighbors,
-    get_cost: GetCost,
-    is_walkable: IsWalkable,
+pub trait IntoIdCost<Id> {
+    fn into_id_cost(self) -> (Id, Cost);
+}
+impl<Id> IntoIdCost<Id> for Id {
+    fn into_id_cost(self) -> (Id, Cost) {
+        (self, 1)
+    }
+}
+impl<Id> IntoIdCost<Id> for (Id, Cost) {
+    fn into_id_cost(self) -> (Id, Cost) {
+        self
+    }
+}
+
+pub fn a_star_search<Id, GetNeighbors, NeighborIter, NeighborReturn, Heuristic>(
+    mut get_all_neighbors: GetNeighbors,
     start: Id,
     goal: Id,
-    heuristic: Heuristic,
+    mut heuristic: Heuristic,
 ) -> Option<Path<Id>>
 where
     Id: Copy + std::cmp::Eq + std::hash::Hash + std::fmt::Debug,
-    GetNeighbors: Fn(Id) -> NeighborIter,
-    NeighborIter: Iterator<Item = Id>,
-    GetCost: Fn(Id, Id) -> Cost,
-    Heuristic: Fn(Id) -> Cost,
-    IsWalkable: Fn(Id) -> bool,
+    GetNeighbors: FnMut(Id) -> NeighborIter,
+    NeighborIter: Iterator<Item = NeighborReturn>,
+    NeighborReturn: IntoIdCost<Id>,
+    Heuristic: FnMut(Id) -> Cost,
 {
     if start == goal {
         return Some(Path::new(vec![start, start], 0));
@@ -77,12 +88,9 @@ where
         }
         let current_cost = visited[&current_id].0;
 
-        for other_id in get_all_neighbors(current_id) {
-            let other_cost = current_cost + get_cost(current_id, other_id);
-
-            if !is_walkable(other_id) && other_id != goal {
-                continue;
-            }
+        for other in get_all_neighbors(current_id) {
+            let (other_id, delta_cost) = other.into_id_cost();
+            let other_cost = current_cost + delta_cost;
 
             let heuristic = heuristic(other_id);
 
@@ -124,19 +132,16 @@ where
     Some(Path::new(steps, visited[&goal].0))
 }
 
-pub fn dijkstra_search<Id, GetNeighbors, NeighborIter, GetCost, IsWalkable>(
-    get_all_neighbors: GetNeighbors,
-    get_cost: GetCost,
-    is_walkable: IsWalkable,
+pub fn dijkstra_search<Id, GetNeighbors, NeighborIter, NeighborReturn>(
+    mut get_all_neighbors: GetNeighbors,
     start: Id,
     goals: &[Id],
 ) -> HashMap<Id, Path<Id>>
 where
     Id: Copy + ::std::cmp::Eq + ::std::hash::Hash + ::std::fmt::Debug,
-    GetNeighbors: Fn(Id) -> NeighborIter,
-    NeighborIter: Iterator<Item = Id>,
-    GetCost: Fn(Id, Id) -> Cost,
-    IsWalkable: Fn(Id) -> bool,
+    GetNeighbors: FnMut(Id) -> NeighborIter,
+    NeighborIter: Iterator<Item = NeighborReturn>,
+    NeighborReturn: IntoIdCost<Id>,
 {
     let mut visited = ::std::collections::HashMap::new();
     let mut next = vec![(start, 0)];
@@ -159,24 +164,9 @@ where
             break;
         }
 
-        if !is_walkable(current_id) {
-            continue;
-        }
-
-        for other_id in get_all_neighbors(current_id) {
-            let other_cost = cost + get_cost(current_id, other_id);
-
-            if !is_walkable(other_id) {
-                let mut is_goal = false;
-                for &goal_id in remaining_goals.iter() {
-                    if other_id == goal_id {
-                        is_goal = true;
-                    }
-                }
-                if !is_goal {
-                    continue;
-                }
-            }
+        for other in get_all_neighbors(current_id) {
+            let (other_id, delta_cost) = other.into_id_cost();
+            let other_cost = cost + delta_cost;
 
             if let Some(&(prev_cost, _)) = visited.get(&other_id) {
                 if prev_cost > other_cost {
