@@ -6,7 +6,6 @@ pub struct IntProgram {
     relative_base: isize,
     pub mem: Vec<isize>,
     pub inputs: Vec<isize>,
-    default: Option<isize>,
 }
 
 impl IntProgram {
@@ -16,16 +15,6 @@ impl IntProgram {
             relative_base: 0,
             mem: input.split(',').map(parse).collect(),
             inputs,
-            default: None,
-        }
-    }
-    pub fn with_default(input: &str, default: isize) -> Self {
-        IntProgram {
-            index: 0,
-            relative_base: 0,
-            mem: input.split(',').map(parse).collect(),
-            inputs: vec![],
-            default: Some(default),
         }
     }
     pub fn get(&self, index: isize) -> isize {
@@ -38,13 +27,18 @@ impl IntProgram {
         }
         &mut self.mem[index]
     }
+    pub fn add_input(&mut self, input: &str) {
+        for c in input.chars() {
+            self.inputs.push(c as u8 as isize);
+        }
+    }
 }
 
 pub enum IntResult {
     Finished,
     Output(isize),
     Step,
-    Default,
+    MissingInput,
 }
 
 pub fn int_code(code: &mut IntProgram, return_on_output: bool) -> Option<isize> {
@@ -52,7 +46,8 @@ pub fn int_code(code: &mut IntProgram, return_on_output: bool) -> Option<isize> 
         match step_int_code(code, return_on_output) {
             IntResult::Finished => return None,
             IntResult::Output(o) => return Some(o),
-            _ => {}
+            IntResult::MissingInput => panic!("Out of Input"),
+            IntResult::Step => {}
         }
     }
 }
@@ -110,13 +105,7 @@ pub fn step_int_code(code: &mut IntProgram, return_on_output: bool) -> IntResult
         }
         3 => {
             if code.inputs.is_empty() {
-                if let Some(input) = code.default {
-                    *code.get_mut(p[0]) = input;
-                    code.index += p.len() as isize + 1;
-                    return IntResult::Default;
-                } else {
-                    panic!("Out of Input");
-                }
+                return IntResult::MissingInput;
             } else {
                 *code.get_mut(p[0]) = code.inputs.remove(0);
             }
