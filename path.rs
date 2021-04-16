@@ -28,24 +28,20 @@ impl<P> Index<usize> for Path<P> {
     }
 }
 
-pub fn ordered_insert<T, V, F>(vector: &mut Vec<T>, element: T, get_value: F)
+pub fn ordered_insert<T, V, F>(vector: &mut Vec<T>, element: T, mut get_value: F)
 where
     T: std::fmt::Debug,
     V: Ord,
-    F: Fn(&T) -> V,
+    F: FnMut(&T) -> V,
 {
+    use std::cmp::Reverse;
     let value = get_value(&element);
-    let mut a = 0;
-    let mut b = vector.len();
-    while b - a > 1 {
-        let mid = (a + b) / 2;
-        if get_value(&vector[mid]) >= value {
-            a = mid;
-        } else {
-            b = mid;
-        }
-    }
-    vector.insert(b, element);
+    let index = vector.binary_search_by_key(&Reverse(value), |x| Reverse(get_value(x)));
+    let index = match index {
+        Ok(i) => i,
+        Err(i) => i,
+    };
+    vector.insert(index, element);
 }
 
 pub trait IntoIdCost<Id> {
@@ -59,6 +55,26 @@ impl<Id> IntoIdCost<Id> for Id {
 impl<Id> IntoIdCost<Id> for (Id, Cost) {
     fn into_id_cost(self) -> (Id, Cost) {
         self
+    }
+}
+impl<'a, Id: Copy> IntoIdCost<Id> for &'a (Id, Cost) {
+    fn into_id_cost(self) -> (Id, Cost) {
+        *self
+    }
+}
+impl<'a, 'b, Id: Copy> IntoIdCost<Id> for (&'a Id, &'b Cost) {
+    fn into_id_cost(self) -> (Id, Cost) {
+        (*self.0, *self.1)
+    }
+}
+impl<'a, Id: Copy> IntoIdCost<Id> for (&'a Id, Cost) {
+    fn into_id_cost(self) -> (Id, Cost) {
+        (*self.0, self.1)
+    }
+}
+impl<'b, Id> IntoIdCost<Id> for (Id, &'b Cost) {
+    fn into_id_cost(self) -> (Id, Cost) {
+        (self.0, *self.1)
     }
 }
 
@@ -94,19 +110,25 @@ where
 
             let heuristic = heuristic(other_id);
 
-            if let Some(&(prev_cost, _)) = visited.get(&other_id) {
-                if prev_cost > other_cost {
+            let mut needs_visit = true;
+            if let Some((prev_cost, prev_id)) = visited.get_mut(&other_id) {
+                if *prev_cost > other_cost {
                     next.retain(|&(id, _)| id != other_id);
+                    *prev_cost = other_cost;
+                    *prev_id = current_id;
+                } else {
+                    needs_visit = false;
                 }
+            } else {
+                visited.insert(other_id, (other_cost, current_id));
             }
 
-            if !visited.contains_key(&other_id) || visited[&other_id].0 > other_cost {
+            if needs_visit {
                 ordered_insert(
                     &mut next,
                     (other_id, other_cost + heuristic),
                     |&(_, cost)| cost,
                 );
-                visited.insert(other_id, (other_cost, current_id));
             }
         }
     }
@@ -168,15 +190,21 @@ where
             let (other_id, delta_cost) = other.into_id_cost();
             let other_cost = cost + delta_cost;
 
-            if let Some(&(prev_cost, _)) = visited.get(&other_id) {
-                if prev_cost > other_cost {
+            let mut needs_visit = true;
+            if let Some((prev_cost, prev_id)) = visited.get_mut(&other_id) {
+                if *prev_cost > other_cost {
                     next.retain(|&(id, _)| id != other_id);
+                    *prev_cost = other_cost;
+                    *prev_id = current_id;
+                } else {
+                    needs_visit = false;
                 }
+            } else {
+                visited.insert(other_id, (other_cost, current_id));
             }
 
-            if !visited.contains_key(&other_id) || visited[&other_id].0 > other_cost {
+            if needs_visit {
                 ordered_insert(&mut next, (other_id, other_cost), |&(_, cost)| cost);
-                visited.insert(other_id, (other_cost, current_id));
             }
         }
     }

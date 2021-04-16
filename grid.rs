@@ -155,11 +155,15 @@ impl<T> Grid<T> {
         &self,
         start: Point,
         goals: &[Point],
-        is_walkable: impl Fn(Point) -> bool,
+        is_walkable: impl Fn(&T) -> bool,
     ) -> HashMap<Point, Path<Point>> {
         let neigh = self.manhattan();
         dijkstra_search(
-            |p| neigh.get_all_neighbors(p).filter(|p| is_walkable(*p)),
+            |p| {
+                neigh
+                    .get_all_neighbors(p)
+                    .filter(|p| is_walkable(self.index(*p)))
+            },
             start,
             goals,
         )
@@ -168,12 +172,16 @@ impl<T> Grid<T> {
         &self,
         start: Point,
         goal: Point,
-        is_walkable: impl Fn(Point) -> bool,
+        is_walkable: impl Fn(&T) -> bool,
         heuristic: impl FnMut(Point) -> usize,
     ) -> Option<Path<Point>> {
         let neigh = self.manhattan();
         a_star_search(
-            |p| neigh.get_all_neighbors(p).filter(|p| is_walkable(*p)),
+            |p| {
+                neigh
+                    .get_all_neighbors(p)
+                    .filter(|p| is_walkable(self.index(*p)))
+            },
             start,
             goal,
             heuristic,
