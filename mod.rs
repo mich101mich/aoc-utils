@@ -137,3 +137,44 @@ pub fn moore(p1: (usize, usize), p2: (usize, usize)) -> usize {
 pub fn moore_i(p1: (isize, isize), p2: (isize, isize)) -> isize {
     diff_i(p1.0, p2.0).max(diff_i(p1.1, p2.1))
 }
+
+pub fn binary_search(start: usize, mut check: impl FnMut(usize) -> bool) -> usize {
+    let mut min = start;
+    let mut max = start;
+    loop {
+        if check(max) {
+            break;
+        }
+        min = max;
+        max *= 2;
+    }
+    while max - min > 1 {
+        let mid = (max + min) / 2;
+        if check(mid) {
+            max = mid;
+        } else {
+            min = mid;
+        }
+    }
+    max
+}
+pub fn binary_search_i(start: isize, mut check: impl FnMut(isize) -> bool) -> isize {
+    let mut min = start;
+    let mut max = start;
+    loop {
+        if check(max) {
+            break;
+        }
+        min = max;
+        max *= 2;
+    }
+    while max - min > 1 {
+        let mid = (max + min) / 2;
+        if check(mid) {
+            max = mid;
+        } else {
+            min = mid;
+        }
+    }
+    max
+}

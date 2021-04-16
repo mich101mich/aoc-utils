@@ -44,7 +44,7 @@ impl<T> Grid<T> {
         Some((x as usize, y as usize))
     }
 
-    pub fn grid_iter_index(&self) -> impl Iterator<Item = Point> {
+    pub fn grid_index_iter(&self) -> impl Iterator<Item = Point> {
         let (w, h) = self.bounds();
         (0..w).flat_map(move |x| (0..h).map(move |y| (x, y)))
     }
@@ -53,6 +53,18 @@ impl<T> Grid<T> {
     }
     pub fn grid_iter_mut(&mut self) -> impl Iterator<Item = &mut T> {
         self.0.iter_mut().flat_map(|r| r.iter_mut())
+    }
+    pub fn grid_iter_index(&self) -> impl Iterator<Item = (Point, &T)> {
+        self.0
+            .iter()
+            .enumerate()
+            .flat_map(|(y, r)| r.iter().enumerate().map(move |(x, v)| ((x, y), v)))
+    }
+    pub fn grid_iter_mut_index(&mut self) -> impl Iterator<Item = (Point, &mut T)> {
+        self.0
+            .iter_mut()
+            .enumerate()
+            .flat_map(|(y, r)| r.iter_mut().enumerate().map(move |(x, v)| ((x, y), v)))
     }
 
     pub fn get(&self, (x, y): Point) -> Option<&T> {
@@ -86,12 +98,44 @@ impl<T> Grid<T> {
                 .map(move |(x, _)| (x, y))
         })
     }
+    pub fn find_all(&self, t: T) -> impl Iterator<Item = Point> + '_
+    where
+        T: PartialEq,
+    {
+        self.0
+            .iter()
+            .enumerate()
+            .flat_map(move |(y, row)| row.iter().enumerate().map(move |(x, v)| (x, y, v)))
+            .filter(move |(_, _, v)| **v == t)
+            .map(move |(x, y, _)| (x, y))
+    }
 
     pub fn manhattan(&self) -> ManhattanNeighborhood {
         ManhattanNeighborhood::new(self.w(), self.h())
     }
     pub fn moore(&self) -> MooreNeighborhood {
         MooreNeighborhood::new(self.w(), self.h())
+    }
+
+    pub fn is_on_border(&self, p: Point, border: Dir) -> bool {
+        match border {
+            Dir::Left => p.1 == 0,
+            Dir::Up => p.0 == 0,
+            Dir::Right => p.0 == self.w() - 1,
+            Dir::Down => p.1 == self.h() - 1,
+        }
+    }
+    pub fn is_on_any_border(&self, p: Point) -> bool {
+        let (w, h) = self.bounds();
+        p.0 == 0 || p.1 == 0 || p.0 == w - 1 || p.1 == h - 1
+    }
+    pub fn border(&self, border: Dir) -> Box<dyn Iterator<Item = &T> + '_> {
+        match border {
+            Dir::Left => Box::new(self.col(0)),
+            Dir::Up => Box::new(self.row(0)),
+            Dir::Right => Box::new(self.col(self.w() - 1)),
+            Dir::Down => Box::new(self.row(self.h() - 1)),
+        }
     }
 
     pub fn trim_with(&mut self, mut empty: impl FnMut(&T) -> bool) -> (usize, usize, usize, usize) {
