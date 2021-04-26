@@ -1,4 +1,6 @@
-use std::collections::{HashMap, HashSet};
+use std::cmp::{Eq, Ord, Ordering, PartialEq, PartialOrd};
+use std::collections::{BinaryHeap, HashMap, HashSet};
+use std::hash::Hash;
 
 pub type Cost = usize;
 
@@ -26,22 +28,6 @@ impl<P> Index<usize> for Path<P> {
     fn index(&self, index: usize) -> &P {
         &self.path[index]
     }
-}
-
-pub fn ordered_insert<T, V, F>(vector: &mut Vec<T>, element: T, mut get_value: F)
-where
-    T: std::fmt::Debug,
-    V: Ord,
-    F: FnMut(&T) -> V,
-{
-    use std::cmp::Reverse;
-    let value = get_value(&element);
-    let index = vector.binary_search_by_key(&Reverse(value), |x| Reverse(get_value(x)));
-    let index = match index {
-        Ok(i) => i,
-        Err(i) => i,
-    };
-    vector.insert(index, element);
 }
 
 pub trait IntoIdCost<Id> {
@@ -78,6 +64,19 @@ impl<'b, Id> IntoIdCost<Id> for (Id, &'b Cost) {
     }
 }
 
+#[derive(PartialEq, Eq)]
+struct Element<Id>(Id, Cost, Cost);
+impl<Id: Eq> PartialOrd for Element<Id> {
+    fn partial_cmp(&self, rhs: &Element<Id>) -> Option<Ordering> {
+        Some(self.cmp(rhs))
+    }
+}
+impl<Id: Eq> Ord for Element<Id> {
+    fn cmp(&self, rhs: &Element<Id>) -> Ordering {
+        rhs.2.cmp(&self.2)
+    }
+}
+
 pub fn a_star_search<Id, GetNeighbors, NeighborIter, NeighborReturn, Heuristic>(
     mut get_all_neighbors: GetNeighbors,
     start: Id,
@@ -85,7 +84,7 @@ pub fn a_star_search<Id, GetNeighbors, NeighborIter, NeighborReturn, Heuristic>(
     mut heuristic: Heuristic,
 ) -> Option<Path<Id>>
 where
-    Id: Copy + std::cmp::Eq + std::hash::Hash + std::fmt::Debug,
+    Id: Copy + Eq + Hash,
     GetNeighbors: FnMut(Id) -> NeighborIter,
     NeighborIter: Iterator<Item = NeighborReturn>,
     NeighborReturn: IntoIdCost<Id>,
@@ -94,26 +93,29 @@ where
     if start == goal {
         return Some(Path::new(vec![start, start], 0));
     }
+
     let mut visited = HashMap::new();
-    let mut next = vec![(start, 0)];
+    let mut next = BinaryHeap::new();
+    next.push(Element(start, 0, 0));
     visited.insert(start, (0, start));
 
-    'search: while let Some((current_id, _)) = next.pop() {
+    while let Some(Element(current_id, current_cost, _)) = next.pop() {
         if current_id == goal {
-            break 'search;
+            break;
         }
-        let current_cost = visited[&current_id].0;
+        match current_cost.cmp(&visited[&current_id].0) {
+            Ordering::Greater => continue,
+            Ordering::Equal => {}
+            Ordering::Less => panic!("Went from {} to {}", current_cost, visited[&current_id].0),
+        }
 
         for other in get_all_neighbors(current_id) {
             let (other_id, delta_cost) = other.into_id_cost();
             let other_cost = current_cost + delta_cost;
 
-            let heuristic = heuristic(other_id);
-
             let mut needs_visit = true;
             if let Some((prev_cost, prev_id)) = visited.get_mut(&other_id) {
                 if *prev_cost > other_cost {
-                    next.retain(|&(id, _)| id != other_id);
                     *prev_cost = other_cost;
                     *prev_id = current_id;
                 } else {
@@ -124,11 +126,8 @@ where
             }
 
             if needs_visit {
-                ordered_insert(
-                    &mut next,
-                    (other_id, other_cost + heuristic),
-                    |&(_, cost)| cost,
-                );
+                let heuristic = heuristic(other_id);
+                next.push(Element(other_id, other_cost, other_cost + heuristic));
             }
         }
     }
@@ -160,40 +159,52 @@ pub fn dijkstra_search<Id, GetNeighbors, NeighborIter, NeighborReturn>(
     goals: &[Id],
 ) -> HashMap<Id, Path<Id>>
 where
-    Id: Copy + ::std::cmp::Eq + ::std::hash::Hash + ::std::fmt::Debug,
+    Id: Copy + Eq + Hash,
     GetNeighbors: FnMut(Id) -> NeighborIter,
     NeighborIter: Iterator<Item = NeighborReturn>,
     NeighborReturn: IntoIdCost<Id>,
 {
-    let mut visited = ::std::collections::HashMap::new();
-    let mut next = vec![(start, 0)];
+    if goals.is_empty() {
+        return HashMap::new();
+    }
+
+    let mut visited = HashMap::new();
+    let mut next = BinaryHeap::new();
+    next.push(Element(start, 0, 0));
     visited.insert(start, (0, start));
 
     let mut remaining_goals = goals.to_vec();
 
     let mut goal_costs = HashMap::with_capacity(goals.len());
 
-    while let Some((current_id, _)) = next.pop() {
-        let cost = visited[&current_id].0;
+    while let Some(Element(current_id, current_cost, _)) = next.pop() {
+        match current_cost.cmp(&visited[&current_id].0) {
+            Ordering::Greater => continue,
+            Ordering::Equal => {}
+            Ordering::Less => panic!("Went from {} to {}", current_cost, visited[&current_id].0),
+        }
 
+        let mut remove_any = false;
         for &goal_id in remaining_goals.iter() {
             if current_id == goal_id {
-                goal_costs.insert(goal_id, cost);
+                goal_costs.insert(goal_id, current_cost);
+                remove_any = true;
             }
         }
-        remaining_goals.retain(|&id| id != current_id);
-        if remaining_goals.is_empty() {
-            break;
+        if remove_any {
+            remaining_goals.retain(|&id| id != current_id);
+            if remaining_goals.is_empty() {
+                break;
+            }
         }
 
         for other in get_all_neighbors(current_id) {
             let (other_id, delta_cost) = other.into_id_cost();
-            let other_cost = cost + delta_cost;
+            let other_cost = current_cost + delta_cost;
 
             let mut needs_visit = true;
             if let Some((prev_cost, prev_id)) = visited.get_mut(&other_id) {
                 if *prev_cost > other_cost {
-                    next.retain(|&(id, _)| id != other_id);
                     *prev_cost = other_cost;
                     *prev_id = current_id;
                 } else {
@@ -204,7 +215,7 @@ where
             }
 
             if needs_visit {
-                ordered_insert(&mut next, (other_id, other_cost), |&(_, cost)| cost);
+                next.push(Element(other_id, other_cost, other_cost));
             }
         }
     }
