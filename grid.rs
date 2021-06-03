@@ -203,10 +203,12 @@ impl<T> Grid<T> {
     ) -> HashMap<Point, Path<Point>> {
         let neigh = self.manhattan();
         dijkstra_search(
-            |p| {
-                neigh
-                    .get_all_neighbors(p)
-                    .filter(|p| is_walkable(self.index(*p)))
+            |pos, out| {
+                for p in neigh.get_all_neighbors(pos) {
+                    if is_walkable(self.index(p)) {
+                        out.push(p);
+                    }
+                }
             },
             start,
             goals,
@@ -221,10 +223,12 @@ impl<T> Grid<T> {
     ) -> Option<Path<Point>> {
         let neigh = self.manhattan();
         a_star_search(
-            |p| {
-                neigh
-                    .get_all_neighbors(p)
-                    .filter(|p| is_walkable(self.index(*p)))
+            |pos, out| {
+                for p in neigh.get_all_neighbors(pos) {
+                    if is_walkable(self.index(p)) {
+                        out.push(p);
+                    }
+                }
             },
             start,
             goal,

@@ -2,6 +2,8 @@ use std::cmp::{Eq, Ord, Ordering, PartialEq, PartialOrd};
 use std::collections::{BinaryHeap, HashMap, HashSet};
 use std::hash::Hash;
 
+use super::*;
+
 pub type Cost = usize;
 
 #[derive(Debug, Clone)]
@@ -77,18 +79,15 @@ impl<Id: Eq> Ord for Element<Id> {
     }
 }
 
-pub fn a_star_search<Id, GetNeighbors, NeighborIter, NeighborReturn, Heuristic>(
-    mut get_all_neighbors: GetNeighbors,
+pub fn a_star_search<Id, IdCost>(
+    mut get_all_neighbors: impl FnMut(Id, &mut Vec<IdCost>),
     start: Id,
     goal: Id,
-    mut heuristic: Heuristic,
+    mut heuristic: impl FnMut(Id) -> Cost,
 ) -> Option<Path<Id>>
 where
     Id: Copy + Eq + Hash,
-    GetNeighbors: FnMut(Id) -> NeighborIter,
-    NeighborIter: Iterator<Item = NeighborReturn>,
-    NeighborReturn: IntoIdCost<Id>,
-    Heuristic: FnMut(Id) -> Cost,
+    IdCost: IntoIdCost<Id>,
 {
     if start == goal {
         return Some(Path::new(vec![start, start], 0));
@@ -98,6 +97,8 @@ where
     let mut next = BinaryHeap::new();
     next.push(Element(start, 0, 0));
     visited.insert(start, (0, start));
+
+    let mut neighbors = vec![];
 
     while let Some(Element(current_id, current_cost, _)) = next.pop() {
         if current_id == goal {
@@ -109,7 +110,9 @@ where
             Ordering::Less => panic!("Went from {} to {}", current_cost, visited[&current_id].0),
         }
 
-        for other in get_all_neighbors(current_id) {
+        neighbors.clear();
+        get_all_neighbors(current_id, &mut neighbors);
+        for other in neighbors.drain(..) {
             let (other_id, delta_cost) = other.into_id_cost();
             let other_cost = current_cost + delta_cost;
 
@@ -153,16 +156,14 @@ where
     Some(Path::new(steps, visited[&goal].0))
 }
 
-pub fn dijkstra_search<Id, GetNeighbors, NeighborIter, NeighborReturn>(
-    mut get_all_neighbors: GetNeighbors,
+pub fn dijkstra_search<Id, IdCost>(
+    mut get_all_neighbors: impl FnMut(Id, &mut Vec<IdCost>),
     start: Id,
     goals: &[Id],
 ) -> HashMap<Id, Path<Id>>
 where
     Id: Copy + Eq + Hash,
-    GetNeighbors: FnMut(Id) -> NeighborIter,
-    NeighborIter: Iterator<Item = NeighborReturn>,
-    NeighborReturn: IntoIdCost<Id>,
+    IdCost: IntoIdCost<Id>,
 {
     if goals.is_empty() {
         return HashMap::new();
@@ -173,9 +174,11 @@ where
     next.push(Element(start, 0, 0));
     visited.insert(start, (0, start));
 
-    let mut remaining_goals = goals.to_vec();
+    let mut remaining_goals = goals.iter().copied().to_set();
 
     let mut goal_costs = HashMap::with_capacity(goals.len());
+
+    let mut neighbors = vec![];
 
     while let Some(Element(current_id, current_cost, _)) = next.pop() {
         match current_cost.cmp(&visited[&current_id].0) {
@@ -185,20 +188,16 @@ where
         }
 
         let mut remove_any = false;
-        for &goal_id in remaining_goals.iter() {
-            if current_id == goal_id {
-                goal_costs.insert(goal_id, current_cost);
-                remove_any = true;
-            }
-        }
-        if remove_any {
-            remaining_goals.retain(|&id| id != current_id);
+        if remaining_goals.remove(&current_id) {
+            goal_costs.insert(current_id, current_cost);
             if remaining_goals.is_empty() {
                 break;
             }
         }
 
-        for other in get_all_neighbors(current_id) {
+        neighbors.clear();
+        get_all_neighbors(current_id, &mut neighbors);
+        for other in neighbors.drain(..) {
             let (other_id, delta_cost) = other.into_id_cost();
             let other_cost = current_cost + delta_cost;
 
