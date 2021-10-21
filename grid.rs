@@ -74,16 +74,16 @@ impl<T> Grid<T> {
         self.0.get_mut(y).and_then(move |v| v.get_mut(x))
     }
 
-    pub fn row(&self, y: usize) -> impl Iterator<Item = &T> {
+    pub fn row(&self, y: usize) -> impl DoubleEndedIterator<Item = &T> {
         self.0[y].iter()
     }
-    pub fn row_mut(&mut self, y: usize) -> impl Iterator<Item = &mut T> {
+    pub fn row_mut(&mut self, y: usize) -> impl DoubleEndedIterator<Item = &mut T> {
         self.0[y].iter_mut()
     }
-    pub fn col(&self, x: usize) -> impl Iterator<Item = &T> {
+    pub fn col(&self, x: usize) -> impl DoubleEndedIterator<Item = &T> {
         self.iter().map(move |r| &r[x])
     }
-    pub fn col_mut(&mut self, x: usize) -> impl Iterator<Item = &mut T> {
+    pub fn col_mut(&mut self, x: usize) -> impl DoubleEndedIterator<Item = &mut T> {
         self.iter_mut().map(move |r| &mut r[x])
     }
 
@@ -129,7 +129,7 @@ impl<T> Grid<T> {
         let (w, h) = self.bounds();
         p.0 == 0 || p.1 == 0 || p.0 == w - 1 || p.1 == h - 1
     }
-    pub fn border(&self, border: Dir) -> Box<dyn Iterator<Item = &T> + '_> {
+    pub fn border(&self, border: Dir) -> Box<dyn DoubleEndedIterator<Item = &T> + '_> {
         match border {
             Dir::Left => Box::new(self.col(0)),
             Dir::Up => Box::new(self.row(0)),
@@ -236,39 +236,65 @@ impl<T> Grid<T> {
         )
     }
 
-    /// Rotates a Square in-place
-    ///
-    /// draws an upside down triangle on the grid:
-    ///     0(1 2 3)
-    ///     4 5(6)7
-    ///     8 9 A B
-    ///     C D E F
-    /// And swap-rotates each element in the triangle with the corresponding positions
-    /// in the rotated versions of the triangle
-    /// example:
-    ///  1 - 7 - E - 8 - 1
-    /// swaps:
-    /// (7 - 1)- E - 8
-    ///  7 -(E - 1)- 8
-    ///  7 - E -(8 - 1)
-    /// result:
-    ///  7 - E - 8 - 1
+    pub fn rotate_counter_clockwise(&mut self) {
+        if self.is_empty() {
+            return;
+        }
+        assert_eq!(self.w(), self.h());
+        let w = self.w();
+        for i in 0..w {
+            let (row, rest) = self.0[i..].split_at_mut(1);
+            row[0][i + 1..]
+                .iter_mut()
+                .zip(rest.iter_mut().map(|r| &mut r[i]))
+                .for_each(|(a, b)| std::mem::swap(a, b));
+        }
+        self.reverse();
+    }
     pub fn rotate_clockwise(&mut self) {
         if self.is_empty() {
             return;
         }
         assert_eq!(self.w(), self.h());
         let w = self.w();
-        for i in 0..w / 2 {
-            for j in i + 1..w - i {
-                let mut a = (j, i);
-                for _ in 0..3 {
-                    let b = (a.1, w - a.0 - 1);
-                    self.swap(a, b);
-                    a = b;
-                }
-            }
+
+        // rotate an array: swap x and y, flip one side
+        self.reverse();
+        for i in 0..w {
+            let (row, rest) = self.0[i..].split_at_mut(1);
+            row[0][i + 1..]
+                .iter_mut()
+                .zip(rest.iter_mut().map(|r| &mut r[i]))
+                .for_each(|(a, b)| std::mem::swap(a, b));
         }
+
+        // // Rotates a Square in-place
+        // //
+        // // draws an upside down triangle on the grid:
+        // //     0(1 2 3)
+        // //     4 5(6)7
+        // //     8 9 A B
+        // //     C D E F
+        // // And swap-rotates each element in the triangle with the corresponding positions
+        // // in the rotated versions of the triangle
+        // // example:
+        // //  1 - 7 - E - 8 - 1
+        // // swaps:
+        // // (7 - 1)- E - 8
+        // //  7 -(E - 1)- 8
+        // //  7 - E -(8 - 1)
+        // // result:
+        // //  7 - E - 8 - 1
+        // for i in 0..w / 2 {
+        //     for j in i + 1..w - i {
+        //         let mut a = (j, i);
+        //         for _ in 0..3 {
+        //             let b = (a.1, w - a.0 - 1);
+        //             self.swap(a, b);
+        //             a = b;
+        //         }
+        //     }
+        // }
     }
 
     pub fn swap(&mut self, mut a: (usize, usize), mut b: (usize, usize)) {
@@ -305,6 +331,15 @@ impl Grid<bool> {
 impl<T> From<Vec<Vec<T>>> for Grid<T> {
     fn from(src: Vec<Vec<T>>) -> Self {
         Self(src)
+    }
+}
+impl<'a, T, A> From<&'a [A]> for Grid<T>
+where
+    A: AsRef<[T]>,
+    T: Clone,
+{
+    fn from(src: &'a [A]) -> Self {
+        Self(src.iter().map(|a| a.as_ref().to_vec()).to_vec())
     }
 }
 
