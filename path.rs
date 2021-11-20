@@ -1,4 +1,3 @@
-use std::cmp::{Eq, Ord, Ordering, PartialEq, PartialOrd};
 use std::collections::{BinaryHeap, HashMap, HashSet};
 use std::hash::Hash;
 
@@ -187,7 +186,6 @@ where
             Ordering::Less => panic!("Went from {} to {}", current_cost, visited[&current_id].0),
         }
 
-        let mut remove_any = false;
         if remaining_goals.remove(&current_id) {
             goal_costs.insert(current_id, current_cost);
             if remaining_goals.is_empty() {

@@ -54,6 +54,12 @@ impl Dir {
             Dir::Up
         }
     }
+    pub fn is_vertical(&self) -> bool {
+        matches!(self, Up | Down)
+    }
+    pub fn is_horizontal(&self) -> bool {
+        !self.is_vertical()
+    }
 }
 
 impl FromStr for Dir {
@@ -101,13 +107,7 @@ macro_rules! impl_dir_ops {
     ($($type:ty),+) => {$(
         impl From<$type> for Dir {
             fn from(val: $type) -> Dir {
-                match val {
-                    0 => Up,
-                    1 => Right,
-                    2 => Down,
-                    3 => Left,
-                    n => panic!("Invalid Dir value: {}", n),
-                }
+                [Up, Right, Down, Left][val as usize]
             }
         }
         impl From<Dir> for $type {

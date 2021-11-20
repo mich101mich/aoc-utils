@@ -1,6 +1,6 @@
 use super::*;
 
-#[derive(Clone, Debug)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct Grid<T>(Vec<Vec<T>>);
 
 impl<T> Grid<T> {
@@ -30,8 +30,11 @@ impl<T> Grid<T> {
     pub fn h(&self) -> usize {
         self.len()
     }
-    pub fn bounds(&self) -> Point {
+    pub fn size(&self) -> Point {
         (self.w(), self.h())
+    }
+    pub fn bounds(&self) -> Point {
+        self.size()
     }
 
     pub fn in_bounds(&self, (x, y): (isize, isize)) -> bool {
@@ -328,6 +331,27 @@ impl Grid<bool> {
     }
 }
 
+impl Grid<char> {
+    pub fn print(&self) {
+        for row in self.iter() {
+            for c in row {
+                print!("{}", c);
+            }
+            println!();
+        }
+    }
+}
+impl<T> Grid<T> {
+    pub fn print_any<D: std::fmt::Display>(&self, f: impl Fn(&T) -> D) {
+        for row in self.iter() {
+            for c in row {
+                print!("{}", f(c));
+            }
+            println!();
+        }
+    }
+}
+
 impl<T> From<Vec<Vec<T>>> for Grid<T> {
     fn from(src: Vec<Vec<T>>) -> Self {
         Self(src)
@@ -346,12 +370,30 @@ where
 impl<T> std::ops::Index<Point> for Grid<T> {
     type Output = T;
     fn index(&self, p: Point) -> &Self::Output {
-        self.get(p).unwrap()
+        match self.get(p) {
+            Some(t) => t,
+            None => panic!("size is {:?} but index is {:?}", self.size(), p),
+        }
     }
 }
 impl<T> std::ops::IndexMut<Point> for Grid<T> {
     fn index_mut(&mut self, p: Point) -> &mut Self::Output {
-        self.get_mut(p).unwrap()
+        let size = self.size();
+        match self.get_mut(p) {
+            Some(t) => t,
+            None => panic!("size is {:?} but index is {:?}", size, p),
+        }
+    }
+}
+impl<'a, T> std::ops::Index<&'a Point> for Grid<T> {
+    type Output = T;
+    fn index(&self, p: &Point) -> &Self::Output {
+        &self[*p]
+    }
+}
+impl<'a, T> std::ops::IndexMut<&'a Point> for Grid<T> {
+    fn index_mut(&mut self, p: &Point) -> &mut Self::Output {
+        &mut self[*p]
     }
 }
 
@@ -368,6 +410,18 @@ impl<T> std::ops::IndexMut<(isize, isize)> for Grid<T> {
         self.map_bounds(p)
             .and_then(move |p| self.get_mut(p))
             .unwrap_or_else(|| panic!("Out of Grid Bounds: {:?}", p))
+    }
+}
+
+impl<T> std::ops::Index<usize> for Grid<T> {
+    type Output = Vec<T>;
+    fn index(&self, p: usize) -> &Self::Output {
+        &self.0[p]
+    }
+}
+impl<T> std::ops::IndexMut<usize> for Grid<T> {
+    fn index_mut(&mut self, p: usize) -> &mut Self::Output {
+        &mut self.0[p]
     }
 }
 

@@ -5,7 +5,8 @@ pub use rand::prelude::*;
 pub use rayon::prelude::*;
 pub use regex::Regex;
 pub use sscanf::*;
-pub use std::collections::{HashMap, HashSet, VecDeque};
+pub use std::cmp::Ordering;
+pub use std::collections::{hash_map::Entry, HashMap, HashSet, VecDeque};
 pub use std::io::Write;
 pub use std::str::FromStr;
 
@@ -146,7 +147,7 @@ pub fn binary_search(start: usize, mut check: impl FnMut(usize) -> bool) -> usiz
             break;
         }
         min = max;
-        max *= 2;
+        max = (max + 1) * 2;
     }
     while max - min > 1 {
         let mid = (max + min) / 2;
@@ -166,7 +167,7 @@ pub fn binary_search_i(start: isize, mut check: impl FnMut(isize) -> bool) -> is
             break;
         }
         min = max;
-        max *= 2;
+        max = (max + 1) * 2;
     }
     while max - min > 1 {
         let mid = (max + min) / 2;
@@ -177,4 +178,29 @@ pub fn binary_search_i(start: isize, mut check: impl FnMut(isize) -> bool) -> is
         }
     }
     max
+}
+
+pub fn detect_loop<T: Hash + std::cmp::Eq>(total_iterations: u128, mut f: impl FnMut() -> T) -> T {
+    let mut seen = HashMap::<T, u128>::new();
+    let mut v;
+    let mut target_number = total_iterations;
+    for i in 0..total_iterations {
+        v = f();
+        match seen.entry(v) {
+            Entry::Occupied(e) => {
+                let prev = *e.get();
+                let loop_len = i - prev;
+                let remaining = (total_iterations - i) % loop_len;
+                target_number = prev + remaining;
+                break;
+            }
+            Entry::Vacant(e) => {
+                e.insert(i);
+            }
+        }
+    }
+    seen.into_iter()
+        .find(|(_, i)| *i == target_number - 1)
+        .unwrap()
+        .0
 }
