@@ -1,4 +1,4 @@
-use std::convert::TryInto;
+use std::convert::{TryFrom, TryInto};
 use std::ops::*;
 use std::str::FromStr;
 
@@ -65,14 +65,14 @@ impl Dir {
 impl FromStr for Dir {
     type Err = String;
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        Ok(match s {
-            "Up" | "up" => Dir::Up,
-            "Right" | "right" => Dir::Right,
-            "Down" | "down" => Dir::Down,
-            "Left" | "left" => Dir::Left,
-            c if c.len() == 1 => c.chars().next().unwrap().into(),
-            s => return Err(format!("Not a Dir: {:?}", s)),
-        })
+        match s {
+            "Up" | "up" => Ok(Dir::Up),
+            "Right" | "right" => Ok(Dir::Right),
+            "Down" | "down" => Ok(Dir::Down),
+            "Left" | "left" => Ok(Dir::Left),
+            c if c.len() == 1 => c.chars().next().unwrap().try_into(),
+            s => Err(format!("Not a Dir: {:?}", s)),
+        }
     }
 }
 
@@ -87,14 +87,15 @@ impl From<&'_ str> for Dir {
     }
 }
 
-impl From<char> for Dir {
-    fn from(c: char) -> Self {
+impl TryFrom<char> for Dir {
+    type Error = String;
+    fn try_from(c: char) -> Result<Self, Self::Error> {
         match c {
-            'N' | 'n' | 'U' | 'u' | '^' => Dir::Up,
-            'E' | 'e' | 'R' | 'r' | '>' => Dir::Right,
-            'S' | 's' | 'D' | 'd' | 'v' => Dir::Down,
-            'W' | 'w' | 'L' | 'l' | '<' => Dir::Left,
-            c => panic!("Not a Dir: '{}'", c),
+            'N' | 'n' | 'U' | 'u' | '^' => Ok(Dir::Up),
+            'E' | 'e' | 'R' | 'r' | '>' => Ok(Dir::Right),
+            'S' | 's' | 'D' | 'd' | 'v' => Ok(Dir::Down),
+            'W' | 'w' | 'L' | 'l' | '<' => Ok(Dir::Left),
+            c => Err(format!("Not a Dir: '{}'", c)),
         }
     }
 }
