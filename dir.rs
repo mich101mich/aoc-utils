@@ -54,6 +54,15 @@ impl Dir {
             Dir::Up
         }
     }
+    pub fn from_char(c: char) -> Result<Dir, String> {
+        match c {
+            'N' | 'n' | 'U' | 'u' | '^' => Ok(Dir::Up),
+            'E' | 'e' | 'R' | 'r' | '>' => Ok(Dir::Right),
+            'S' | 's' | 'D' | 'd' | 'v' => Ok(Dir::Down),
+            'W' | 'w' | 'L' | 'l' | '<' => Ok(Dir::Left),
+            c => Err(format!("Not a Dir: '{}'", c)),
+        }
+    }
     pub fn is_vertical(&self) -> bool {
         matches!(self, Up | Down)
     }
@@ -70,7 +79,7 @@ impl FromStr for Dir {
             "Right" | "right" => Ok(Dir::Right),
             "Down" | "down" => Ok(Dir::Down),
             "Left" | "left" => Ok(Dir::Left),
-            c if c.len() == 1 => c.chars().next().unwrap().try_into(),
+            c if c.len() == 1 => Dir::from_char(c.chars().next().unwrap()),
             s => Err(format!("Not a Dir: {:?}", s)),
         }
     }
@@ -87,16 +96,9 @@ impl From<&'_ str> for Dir {
     }
 }
 
-impl TryFrom<char> for Dir {
-    type Error = String;
-    fn try_from(c: char) -> Result<Self, Self::Error> {
-        match c {
-            'N' | 'n' | 'U' | 'u' | '^' => Ok(Dir::Up),
-            'E' | 'e' | 'R' | 'r' | '>' => Ok(Dir::Right),
-            'S' | 's' | 'D' | 'd' | 'v' => Ok(Dir::Down),
-            'W' | 'w' | 'L' | 'l' | '<' => Ok(Dir::Left),
-            c => Err(format!("Not a Dir: '{}'", c)),
-        }
+impl From<char> for Dir {
+    fn from(c: char) -> Self {
+        Self::from_char(c).unwrap()
     }
 }
 
