@@ -460,6 +460,20 @@ pub fn char_grid(input: &str) -> Grid<char> {
         .to_vec()
         .into()
 }
+pub fn number_grid_whitespace<'a>(mut input: impl Iterator<Item = &'a str>) -> Grid<isize> {
+    input
+        .by_ref()
+        .take_while(|l| !l.is_empty())
+        .map(|l| l.split_whitespace().map(parse).to_vec())
+        .to_vec()
+        .into()
+}
+pub fn number_grid<'a>(mut input: impl Iterator<Item = &'a str>, separator: char) -> Grid<isize> {
+    input
+        .map(|l| l.split(separator).map(parse).to_vec())
+        .to_vec()
+        .into()
+}
 
 pub fn print_hashtag_line(line: &[bool]) {
     print_dotted_line(line, '#', '.')
