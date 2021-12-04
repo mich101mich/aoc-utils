@@ -99,6 +99,14 @@ impl<K: Hash + Eq, V, I: Iterator<Item = (K, V)>> IterMapExt<K, V> for I {
         self.collect()
     }
 }
+pub trait IterStringExt {
+    fn to_string(self) -> String;
+}
+impl<I: Iterator<Item = char>> IterStringExt for I {
+    fn to_string(self) -> String {
+        self.collect()
+    }
+}
 
 pub trait DiffExt {
     fn diff(self, other: usize) -> usize;
