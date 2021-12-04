@@ -314,6 +314,34 @@ impl<T> Grid<T> {
             );
         }
     }
+
+    pub fn fill_rect(&mut self, tl: (usize, usize), br: (usize, usize), t: T)
+    where
+        T: Clone,
+    {
+        self.0[tl.1..br.1]
+            .iter_mut()
+            .for_each(|row| row[tl.0..br.0].fill(t.clone()));
+    }
+    pub fn fill_rect_with(
+        &mut self,
+        tl: (usize, usize),
+        br: (usize, usize),
+        mut f: impl FnMut((usize, usize)) -> T,
+    ) {
+        self.0
+            .iter_mut()
+            .enumerate()
+            .take(br.1)
+            .skip(tl.1)
+            .for_each(|(y, row)| {
+                row.iter_mut()
+                    .enumerate()
+                    .take(br.0)
+                    .skip(tl.0)
+                    .for_each(|(x, cell)| *cell = f((x, y)));
+            });
+    }
 }
 
 impl Grid<bool> {
