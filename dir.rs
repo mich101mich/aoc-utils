@@ -63,6 +63,16 @@ impl Dir {
             c => Err(format!("Not a Dir: '{}'", c)),
         }
     }
+    pub fn to_char(self) -> char {
+        ['U', 'R', 'D', 'L'][self.num()]
+    }
+    pub fn to_char_arrow(self) -> char {
+        ['^', '>', 'v', '<'][self.num()]
+    }
+    pub fn to_char_cardinal(self) -> char {
+        ['N', 'E', 'S', 'W'][self.num()]
+    }
+
     pub fn is_vertical(&self) -> bool {
         matches!(self, Up | Down)
     }
