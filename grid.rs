@@ -49,7 +49,7 @@ impl<T> Grid<T> {
 
     pub fn grid_index_iter(&self) -> impl Iterator<Item = Point> {
         let (w, h) = self.bounds();
-        (0..w).flat_map(move |x| (0..h).map(move |y| (x, y)))
+        (0..h).flat_map(move |x| (0..w).map(move |y| (x, y)))
     }
     pub fn grid_iter(&self) -> impl Iterator<Item = &T> {
         self.0.iter().flat_map(|r| r.iter())
@@ -428,16 +428,19 @@ impl<'a, T> std::ops::IndexMut<&'a Point> for Grid<T> {
 impl<T> std::ops::Index<(isize, isize)> for Grid<T> {
     type Output = T;
     fn index(&self, p: (isize, isize)) -> &Self::Output {
-        self.map_bounds(p)
-            .and_then(|p| self.get(p))
-            .unwrap_or_else(|| panic!("Out of Grid Bounds: {:?}", p))
+        match self.map_bounds(p).and_then(|p| self.get(p)) {
+            Some(t) => t,
+            None => panic!("size is {:?} but index is {:?}", self.size(), p),
+        }
     }
 }
 impl<T> std::ops::IndexMut<(isize, isize)> for Grid<T> {
     fn index_mut(&mut self, p: (isize, isize)) -> &mut Self::Output {
-        self.map_bounds(p)
-            .and_then(move |p| self.get_mut(p))
-            .unwrap_or_else(|| panic!("Out of Grid Bounds: {:?}", p))
+        let size = self.size();
+        match self.map_bounds(p).and_then(move |p| self.get_mut(p)) {
+            Some(t) => t,
+            None => panic!("size is {:?} but index is {:?}", size, p),
+        }
     }
 }
 
@@ -485,6 +488,13 @@ pub fn char_grid(input: &str) -> Grid<char> {
     input
         .lines()
         .map(|line| line.chars().to_vec())
+        .to_vec()
+        .into()
+}
+pub fn digit_grid(input: &str) -> Grid<usize> {
+    input
+        .lines()
+        .map(|line| line.chars().map(parse_c).to_vec())
         .to_vec()
         .into()
 }
