@@ -141,6 +141,12 @@ impl<T> Grid<T> {
         }
     }
 
+    pub fn trim_to(&mut self, (w, h): Point) {
+        self.0.truncate(h);
+        for row in &mut self.0 {
+            row.truncate(w);
+        }
+    }
     pub fn trim_with(&mut self, mut empty: impl FnMut(&T) -> bool) -> (usize, usize, usize, usize) {
         let mut top = 0;
         while top < self.h() && self.row(top).all(|x| empty(x)) {
@@ -173,6 +179,10 @@ impl<T> Grid<T> {
             right += 1;
         }
         (top, bottom, left, right)
+    }
+
+    pub fn count_with(&mut self, mut f: impl FnMut(&T) -> bool) -> usize {
+        self.grid_iter().filter(|x| f(*x)).count()
     }
 
     pub fn square_ring_delta_iterator(
@@ -356,6 +366,9 @@ impl Grid<bool> {
     }
     pub fn trim(&mut self) -> (usize, usize, usize, usize) {
         self.trim_with(|t| !*t)
+    }
+    pub fn count(&mut self) -> usize {
+        self.count_with(|t| *t)
     }
 }
 
