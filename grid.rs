@@ -325,6 +325,15 @@ impl<T> Grid<T> {
         }
     }
 
+    pub fn fill(&mut self, t: T)
+    where
+        T: Clone,
+    {
+        self.0.iter_mut().for_each(|row| row.fill(t.clone()));
+    }
+    pub fn fill_with(&mut self, mut f: impl FnMut((usize, usize)) -> T) {
+        self.grid_iter_mut_index().for_each(|(p, t)| *t = f(p));
+    }
     pub fn fill_rect(&mut self, tl: (usize, usize), br: (usize, usize), t: T)
     where
         T: Clone,
