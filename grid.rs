@@ -147,6 +147,7 @@ impl<T> Grid<T> {
             row.truncate(w);
         }
     }
+    #[allow(clippy::redundant_closure)]
     pub fn trim_with(&mut self, mut empty: impl FnMut(&T) -> bool) -> (usize, usize, usize, usize) {
         let mut top = 0;
         while top < self.h() && self.row(top).all(|x| empty(x)) {
@@ -181,8 +182,14 @@ impl<T> Grid<T> {
         (top, bottom, left, right)
     }
 
-    pub fn count_with(&mut self, mut f: impl FnMut(&T) -> bool) -> usize {
+    pub fn count_with(&self, mut f: impl FnMut(&T) -> bool) -> usize {
         self.grid_iter().filter(|x| f(*x)).count()
+    }
+    pub fn sum(&self) -> T
+    where
+        T: std::iter::Sum<T> + Copy,
+    {
+        self.grid_iter().copied().sum()
     }
 
     pub fn square_ring_delta_iterator(
