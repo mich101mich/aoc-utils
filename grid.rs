@@ -24,6 +24,47 @@ impl<T> Grid<T> {
         Self(vec![vec![src; w]; h])
     }
 
+    pub fn extend_default(&mut self, (w, h): Point)
+    where
+        T: Default,
+    {
+        if w > self.w() {
+            let diff = w - self.w();
+            for row in &mut self.0 {
+                row.extend(std::iter::repeat_with(Default::default).take(diff));
+            }
+        }
+        while h > self.h() {
+            self.0
+                .push(std::iter::repeat_with(Default::default).take(w).to_vec());
+        }
+    }
+    pub fn extend_by_default(&mut self, (dw, dh): Point)
+    where
+        T: Default,
+    {
+        self.extend_default((self.w() + dw, self.h() + dh));
+    }
+    pub fn extend_clone(&mut self, (w, h): Point, src: T)
+    where
+        T: Clone,
+    {
+        if w > self.w() {
+            for row in &mut self.0 {
+                row.resize(w, src.clone());
+            }
+        }
+        while h > self.h() {
+            self.0.push(vec![src.clone(); w]);
+        }
+    }
+    pub fn extend_by_clone(&mut self, (dw, dh): Point, src: T)
+    where
+        T: Clone,
+    {
+        self.extend_clone((self.w() + dw, self.h() + dh), src);
+    }
+
     pub fn w(&self) -> usize {
         self.0.get(0).map(|v| v.len()).unwrap_or(0)
     }
