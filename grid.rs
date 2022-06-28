@@ -188,10 +188,9 @@ impl<T> Grid<T> {
             row.truncate(w);
         }
     }
-    #[allow(clippy::redundant_closure)]
     pub fn trim_with(&mut self, mut empty: impl FnMut(&T) -> bool) -> (usize, usize, usize, usize) {
         let mut top = 0;
-        while top < self.h() && self.row(top).all(|x| empty(x)) {
+        while top < self.h() && self.row(top).all(&mut empty) {
             top += 1;
         }
         self.splice(..top, std::iter::empty());
@@ -200,13 +199,13 @@ impl<T> Grid<T> {
         }
 
         let mut bottom = 0;
-        while self.row(self.h() - 1).all(|x| empty(x)) {
+        while self.row(self.h() - 1).all(&mut empty) {
             self.pop();
             bottom += 1;
         }
 
         let mut left = 0;
-        while self.col(left).all(|x| empty(x)) {
+        while self.col(left).all(&mut empty) {
             left += 1;
         }
         self.iter_mut().for_each(|r| {
@@ -214,7 +213,7 @@ impl<T> Grid<T> {
         });
 
         let mut right = 0;
-        while self.col(self.w() - 1).all(|x| empty(x)) {
+        while self.col(self.w() - 1).all(&mut empty) {
             self.iter_mut().for_each(|r| {
                 r.pop();
             });
@@ -408,6 +407,15 @@ impl<T> Grid<T> {
                     .skip(tl.0)
                     .for_each(|(x, cell)| *cell = f((x, y)));
             });
+    }
+
+    pub fn map<O>(&self, mut f: impl FnMut(&T) -> O) -> Grid<O> {
+        let inner = self
+            .0
+            .iter()
+            .map(|row| row.iter().map(&mut f).collect())
+            .collect();
+        Grid(inner)
     }
 }
 
