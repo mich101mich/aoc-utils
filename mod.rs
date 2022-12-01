@@ -22,6 +22,8 @@ mod grid;
 pub use grid::*;
 mod int_code;
 pub use int_code::*;
+mod iter;
+pub use iter::*;
 
 use std::cmp::Eq;
 use std::hash::Hash;
@@ -69,43 +71,6 @@ pub fn comma_values<T: FromStr>(input: &str) -> Vec<T> {
         .split(',')
         .filter_map(|s| s.parse::<T>().ok())
         .to_vec()
-}
-
-pub trait IterExt<T> {
-    fn to_vec(self) -> Vec<T>;
-    fn to_queue(self) -> VecDeque<T>;
-}
-impl<T, I: Iterator<Item = T>> IterExt<T> for I {
-    fn to_vec(self) -> Vec<T> {
-        self.collect()
-    }
-    fn to_queue(self) -> VecDeque<T> {
-        self.collect()
-    }
-}
-pub trait IterHashExt<T: Hash + Eq> {
-    fn to_set(self) -> HashSet<T>;
-}
-impl<T: Hash + Eq, I: Iterator<Item = T>> IterHashExt<T> for I {
-    fn to_set(self) -> HashSet<T> {
-        self.collect()
-    }
-}
-pub trait IterMapExt<K: Hash + Eq, V> {
-    fn to_map(self) -> HashMap<K, V>;
-}
-impl<K: Hash + Eq, V, I: Iterator<Item = (K, V)>> IterMapExt<K, V> for I {
-    fn to_map(self) -> HashMap<K, V> {
-        self.collect()
-    }
-}
-pub trait IterStringExt {
-    fn to_string(self) -> String;
-}
-impl<I: Iterator<Item = char>> IterStringExt for I {
-    fn to_string(self) -> String {
-        self.collect()
-    }
 }
 
 pub trait DiffExt {

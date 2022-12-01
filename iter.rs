@@ -1,0 +1,124 @@
+use super::*;
+
+pub trait IterExt<T> {
+    fn to_vec(self) -> Vec<T>;
+    fn to_queue(self) -> VecDeque<T>;
+    fn split_fold<B, P, F, G>(
+        self,
+        predicate: P,
+        init: G,
+        fold_op: F,
+    ) -> Split<T, Self, B, P, F, G>
+    where
+        P: FnMut(&T) -> bool,
+        G: FnMut() -> B,
+        F: FnMut(B, T) -> B,
+        Self: Iterator<Item = T> + Sized;
+
+    fn split_to_vec<P>(
+        self,
+        predicate: P,
+    ) -> Split<T, Self, Vec<T>, P, fn(Vec<T>, T) -> Vec<T>, fn() -> Vec<T>>
+    where
+        P: FnMut(&T) -> bool,
+        Self: Iterator<Item = T> + Sized,
+    {
+        self.split_fold(
+            predicate,
+            || vec![],
+            |mut v, t| {
+                v.push(t);
+                v
+            },
+        )
+    }
+}
+impl<T, I: Iterator<Item = T>> IterExt<T> for I {
+    fn to_vec(self) -> Vec<T> {
+        self.collect()
+    }
+    fn to_queue(self) -> VecDeque<T> {
+        self.collect()
+    }
+    fn split_fold<B, P, F, G>(self, predicate: P, init: G, fold_op: F) -> Split<T, Self, B, P, F, G>
+    where
+        P: FnMut(&T) -> bool,
+        G: FnMut() -> B,
+        F: FnMut(B, T) -> B,
+    {
+        Split {
+            iter: self,
+            predicate,
+            init,
+            fold_op,
+        }
+    }
+}
+
+pub trait IterHashExt<T: Hash + Eq> {
+    fn to_set(self) -> HashSet<T>;
+}
+impl<T: Hash + Eq, I: Iterator<Item = T>> IterHashExt<T> for I {
+    fn to_set(self) -> HashSet<T> {
+        self.collect()
+    }
+}
+pub trait IterMapExt<K: Hash + Eq, V> {
+    fn to_map(self) -> HashMap<K, V>;
+}
+impl<K: Hash + Eq, V, I: Iterator<Item = (K, V)>> IterMapExt<K, V> for I {
+    fn to_map(self) -> HashMap<K, V> {
+        self.collect()
+    }
+}
+pub trait IterStringExt {
+    fn to_string(self) -> String;
+}
+impl<I: Iterator<Item = char>> IterStringExt for I {
+    fn to_string(self) -> String {
+        self.collect()
+    }
+}
+
+pub struct Split<T, I, B, P, F, G>
+where
+    I: Iterator<Item = T>,
+    P: FnMut(&T) -> bool,
+    G: FnMut() -> B,
+    F: FnMut(B, T) -> B,
+{
+    iter: I,
+    predicate: P,
+    init: G,
+    fold_op: F,
+}
+impl<T, I, B, P, F, G> Iterator for Split<T, I, B, P, F, G>
+where
+    I: Iterator<Item = T>,
+    P: FnMut(&T) -> bool,
+    G: FnMut() -> B,
+    F: FnMut(B, T) -> B,
+{
+    type Item = B;
+    fn next(&mut self) -> Option<Self::Item> {
+        if let Some(x) = self.iter.next() {
+            let mut acc = (self.init)();
+            if (self.predicate)(&x) {
+                return Some(acc);
+            }
+            acc = (self.fold_op)(acc, x);
+            acc = self
+                .iter
+                .by_ref()
+                .take_while(|x| !(self.predicate)(x))
+                .fold(acc, &mut self.fold_op);
+            Some(acc)
+        } else {
+            None
+        }
+    }
+
+    fn size_hint(&self) -> (usize, Option<usize>) {
+        self.iter.size_hint()
+    }
+}

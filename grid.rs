@@ -473,7 +473,7 @@ where
     }
 }
 
-impl<T> std::ops::Index<Point> for Grid<T> {
+impl<T> Index<Point> for Grid<T> {
     type Output = T;
     fn index(&self, p: Point) -> &Self::Output {
         match self.get(p) {
@@ -482,7 +482,7 @@ impl<T> std::ops::Index<Point> for Grid<T> {
         }
     }
 }
-impl<T> std::ops::IndexMut<Point> for Grid<T> {
+impl<T> IndexMut<Point> for Grid<T> {
     fn index_mut(&mut self, p: Point) -> &mut Self::Output {
         let size = self.size();
         match self.get_mut(p) {
@@ -491,19 +491,19 @@ impl<T> std::ops::IndexMut<Point> for Grid<T> {
         }
     }
 }
-impl<'a, T> std::ops::Index<&'a Point> for Grid<T> {
+impl<'a, T> Index<&'a Point> for Grid<T> {
     type Output = T;
     fn index(&self, p: &Point) -> &Self::Output {
         &self[*p]
     }
 }
-impl<'a, T> std::ops::IndexMut<&'a Point> for Grid<T> {
+impl<'a, T> IndexMut<&'a Point> for Grid<T> {
     fn index_mut(&mut self, p: &Point) -> &mut Self::Output {
         &mut self[*p]
     }
 }
 
-impl<T> std::ops::Index<(isize, isize)> for Grid<T> {
+impl<T> Index<(isize, isize)> for Grid<T> {
     type Output = T;
     fn index(&self, p: (isize, isize)) -> &Self::Output {
         match self.map_bounds(p).and_then(|p| self.get(p)) {
@@ -512,7 +512,7 @@ impl<T> std::ops::Index<(isize, isize)> for Grid<T> {
         }
     }
 }
-impl<T> std::ops::IndexMut<(isize, isize)> for Grid<T> {
+impl<T> IndexMut<(isize, isize)> for Grid<T> {
     fn index_mut(&mut self, p: (isize, isize)) -> &mut Self::Output {
         let size = self.size();
         match self.map_bounds(p).and_then(move |p| self.get_mut(p)) {
@@ -522,27 +522,38 @@ impl<T> std::ops::IndexMut<(isize, isize)> for Grid<T> {
     }
 }
 
-impl<T> std::ops::Index<usize> for Grid<T> {
+impl<T> Index<usize> for Grid<T> {
     type Output = Vec<T>;
     fn index(&self, p: usize) -> &Self::Output {
         &self.0[p]
     }
 }
-impl<T> std::ops::IndexMut<usize> for Grid<T> {
+impl<T> IndexMut<usize> for Grid<T> {
     fn index_mut(&mut self, p: usize) -> &mut Self::Output {
         &mut self.0[p]
     }
 }
 
-impl<T> std::ops::Deref for Grid<T> {
+impl<T> Deref for Grid<T> {
     type Target = Vec<Vec<T>>;
     fn deref(&self) -> &Self::Target {
         &self.0
     }
 }
-impl<T> std::ops::DerefMut for Grid<T> {
+impl<T> DerefMut for Grid<T> {
     fn deref_mut(&mut self) -> &mut Self::Target {
         &mut self.0
+    }
+}
+
+#[derive(Debug, Clone, FromScanf)]
+#[sscanf(format = "{:/[.#]+/}")]
+struct HashtagLine(#[sscanf(map = |s: &str| dotted_line(s, '#'))] pub Vec<bool>);
+
+impl Deref for HashtagLine {
+    type Target = Vec<bool>;
+    fn deref(&self) -> &Self::Target {
+        &self.0
     }
 }
 
