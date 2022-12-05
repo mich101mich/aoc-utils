@@ -73,6 +73,38 @@ pub fn comma_values<T: FromStr>(input: &str) -> Vec<T> {
         .to_vec()
 }
 
+pub trait SliceExt {
+    type Item;
+    fn two_muts<'a>(
+        &'a mut self,
+        a: usize,
+        b: usize,
+    ) -> Option<(&'a mut Self::Item, &'a mut Self::Item)>;
+}
+
+impl<T> SliceExt for [T] {
+    type Item = T;
+    fn two_muts<'a>(
+        &'a mut self,
+        a: usize,
+        b: usize,
+    ) -> Option<(&'a mut Self::Item, &'a mut Self::Item)> {
+        if a != b && a < self.len() && b < self.len() {
+            // SAFETY:
+            // - `a` and `b` are different, leading to two different mutable references.
+            // - `a` and `b` are both in bounds, leading to valid pointers.
+            // - The lifetime bounds on the return value ensures that `self` stays mutably
+            //   borrowed for the duration of both references.
+            unsafe {
+                let p = self.as_mut_ptr();
+                Some((&mut *p.add(a), &mut *p.add(b)))
+            }
+        } else {
+            None
+        }
+    }
+}
+
 pub trait DiffExt {
     fn diff(self, other: usize) -> usize;
 }

@@ -357,18 +357,25 @@ impl<T> Grid<T> {
         // }
     }
 
-    pub fn swap(&mut self, mut a: (usize, usize), mut b: (usize, usize)) {
+    pub fn two_muts<'a>(&'a mut self, a: Point, b: Point) -> Option<(&'a mut T, &'a mut T)> {
+        if a == b {
+            None
+        } else if a.1 == b.1 {
+            self.0.get_mut(a.1).and_then(|r| r.two_muts(a.0, b.0))
+        } else {
+            self.0.two_muts(a.1, b.1).and_then(|(ra, rb)| {
+                ra.get_mut(a.0)
+                    .and_then(|a| rb.get_mut(b.0).map(|b| (a, b)))
+            })
+        }
+    }
+
+    pub fn swap(&mut self, a: Point, b: Point) {
         if a.1 == b.1 {
             self.0[a.1].swap(a.0, b.0);
         } else {
-            if a.1 > b.1 {
-                std::mem::swap(&mut a, &mut b);
-            }
-            let (front, back) = self.0.split_at_mut(b.1);
-            std::mem::swap(
-                front.get_mut(a.1).unwrap().get_mut(a.0).unwrap(),
-                back[0].get_mut(b.0).unwrap(),
-            );
+            let (a_slice, b_slice) = self.0.two_muts(a.1, b.1).unwrap();
+            std::mem::swap(&mut a_slice[a.0], &mut b_slice[b.0]);
         }
     }
 
@@ -378,10 +385,10 @@ impl<T> Grid<T> {
     {
         self.0.iter_mut().for_each(|row| row.fill(t.clone()));
     }
-    pub fn fill_with(&mut self, mut f: impl FnMut((usize, usize)) -> T) {
+    pub fn fill_with(&mut self, mut f: impl FnMut(Point) -> T) {
         self.grid_iter_mut_index().for_each(|(p, t)| *t = f(p));
     }
-    pub fn fill_rect(&mut self, tl: (usize, usize), br: (usize, usize), t: T)
+    pub fn fill_rect(&mut self, tl: Point, br: Point, t: T)
     where
         T: Clone,
     {
@@ -389,12 +396,7 @@ impl<T> Grid<T> {
             .iter_mut()
             .for_each(|row| row[tl.0..br.0].fill(t.clone()));
     }
-    pub fn fill_rect_with(
-        &mut self,
-        tl: (usize, usize),
-        br: (usize, usize),
-        mut f: impl FnMut((usize, usize)) -> T,
-    ) {
+    pub fn fill_rect_with(&mut self, tl: Point, br: Point, mut f: impl FnMut(Point) -> T) {
         self.0
             .iter_mut()
             .enumerate()
