@@ -81,6 +81,9 @@ impl<T> Grid<T> {
     pub fn in_bounds(&self, (x, y): (isize, isize)) -> bool {
         x >= 0 && y >= 0 && x < self.w() as isize && y < self.h() as isize
     }
+    pub fn contains(&self, (x, y): Point) -> bool {
+        x < self.w() && y < self.h()
+    }
     pub fn map_bounds(&self, (x, y): (isize, isize)) -> Option<Point> {
         if x < 0 || y < 0 || x >= self.w() as isize || y >= self.h() as isize {
             return None;
@@ -129,6 +132,15 @@ impl<T> Grid<T> {
     }
     pub fn col_mut(&mut self, x: usize) -> impl DoubleEndedIterator<Item = &mut T> {
         self.iter_mut().map(move |r| &mut r[x])
+    }
+
+    pub fn checked_move(&self, pos: Point, dir: Dir) -> Option<Point> {
+        dir.bounded_add(pos, self.bounds())
+    }
+    pub fn dir_iter<'a>(&'a self, start: Point, dir: Dir) -> impl Iterator<Item = Point> + 'a {
+        std::iter::successors(self.checked_move(start, dir), move |&p| {
+            self.checked_move(p, dir)
+        })
     }
 
     pub fn find(&self, t: T) -> Option<Point>

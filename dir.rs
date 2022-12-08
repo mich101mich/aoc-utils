@@ -39,6 +39,10 @@ impl Dir {
             Some((ret.0 as usize, ret.1 as usize))
         }
     }
+    pub fn bounded_add(self, pos: (usize, usize), bounds: (usize, usize)) -> Option<(usize, usize)> {
+        self.checked_add(pos)
+            .filter(|p| p.0 < bounds.0 && p.1 < bounds.1)
+    }
     pub fn from_difference(from: (isize, isize), to: (isize, isize)) -> Dir {
         let axis_0 = to.0 - from.0;
         let axis_1 = to.1 - from.1;

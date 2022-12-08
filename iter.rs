@@ -2,18 +2,35 @@ use super::*;
 
 pub trait IterExt<T> {
     fn to_vec(self) -> Vec<T>;
+
     fn to_queue(self) -> VecDeque<T>;
-    fn split_fold<B, P, F, G>(
-        self,
-        predicate: P,
-        init: G,
-        fold_op: F,
-    ) -> Split<T, Self, B, P, F, G>
+
+    fn take_while_inclusive<P>(self, predicate: P) -> TakeWhileInclusive<Self, P>
+    where
+        Self: Iterator<Item = T> + Sized,
+        P: FnMut(&T) -> bool,
+    {
+        TakeWhileInclusive {
+            iter: self,
+            predicate,
+            flag: false,
+        }
+    }
+
+    fn split_fold<B, P, F, G>(self, predicate: P, init: G, fold_op: F) -> Split<T, Self, B, P, F, G>
     where
         P: FnMut(&T) -> bool,
         G: FnMut() -> B,
         F: FnMut(B, T) -> B,
-        Self: Iterator<Item = T> + Sized;
+        Self: Iterator<Item = T> + Sized,
+    {
+        Split {
+            iter: self,
+            predicate,
+            init,
+            fold_op,
+        }
+    }
 
     fn split_to_vec<P>(
         self,
@@ -39,19 +56,6 @@ impl<T, I: Iterator<Item = T>> IterExt<T> for I {
     }
     fn to_queue(self) -> VecDeque<T> {
         self.collect()
-    }
-    fn split_fold<B, P, F, G>(self, predicate: P, init: G, fold_op: F) -> Split<T, Self, B, P, F, G>
-    where
-        P: FnMut(&T) -> bool,
-        G: FnMut() -> B,
-        F: FnMut(B, T) -> B,
-    {
-        Split {
-            iter: self,
-            predicate,
-            init,
-            fold_op,
-        }
     }
 }
 
@@ -120,5 +124,42 @@ where
 
     fn size_hint(&self) -> (usize, Option<usize>) {
         self.iter.size_hint()
+    }
+}
+
+pub struct TakeWhileInclusive<I, P>
+where
+    I: Iterator,
+    P: FnMut(&I::Item) -> bool,
+{
+    iter: I,
+    flag: bool,
+    predicate: P,
+}
+
+impl<I, P> Iterator for TakeWhileInclusive<I, P>
+where
+    I: Iterator,
+    P: FnMut(&I::Item) -> bool,
+{
+    type Item = I::Item;
+
+    fn next(&mut self) -> Option<I::Item> {
+        if self.flag {
+            None
+        } else {
+            let x = self.iter.next()?;
+            self.flag = !(self.predicate)(&x);
+            Some(x)
+        }
+    }
+
+    fn size_hint(&self) -> (usize, Option<usize>) {
+        if self.flag {
+            (0, Some(0))
+        } else {
+            let (_, upper) = self.iter.size_hint();
+            (0, upper) // can't know a lower bound, due to the predicate
+        }
     }
 }
