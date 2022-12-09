@@ -2,13 +2,13 @@ use super::*;
 
 #[derive(Clone, Copy, PartialEq, Eq, Debug, Hash, FromScanf)]
 pub enum Dir {
-    #[sscanf(format_unescaped = r"(?i:up|[un^])")]
+    #[sscanf(r"(?i:up|[un^])")]
     Up,
-    #[sscanf(format_unescaped = r"(?i:right|[re>])")]
+    #[sscanf(r"(?i:right|[re>])")]
     Right,
-    #[sscanf(format_unescaped = r"(?i:down|[dsv])")]
+    #[sscanf(r"(?i:down|[dsv])")]
     Down,
-    #[sscanf(format_unescaped = r"(?i:left|[lw<])")]
+    #[sscanf(r"(?i:left|[lw<])")]
     Left,
 }
 pub use Dir::*;
