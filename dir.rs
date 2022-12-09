@@ -1,25 +1,27 @@
-use std::convert::{TryFrom, TryInto};
-use std::ops::*;
-use std::str::FromStr;
+use super::*;
 
-#[derive(Clone, Copy, PartialEq, Eq, Debug, Hash)]
+#[derive(Clone, Copy, PartialEq, Eq, Debug, Hash, FromScanf)]
 pub enum Dir {
+    #[sscanf(format_unescaped = r"(?i:up|[un^])")]
     Up,
+    #[sscanf(format_unescaped = r"(?i:right|[re>])")]
     Right,
+    #[sscanf(format_unescaped = r"(?i:down|[dsv])")]
     Down,
+    #[sscanf(format_unescaped = r"(?i:left|[lw<])")]
     Left,
 }
 pub use Dir::*;
 
 impl Dir {
     pub fn clockwise(self) -> Dir {
-        ((self.num() + 1) % 4).into()
+        ((self as u8 + 1) % 4).into()
     }
     pub fn counter_clockwise(self) -> Dir {
-        ((self.num() + 3) % 4).into()
+        ((self as u8 + 3) % 4).into()
     }
     pub fn opposite(self) -> Dir {
-        ((self.num() + 2) % 4).into()
+        ((self as u8 + 2) % 4).into()
     }
     pub fn num(self) -> usize {
         self.into()
@@ -28,7 +30,7 @@ impl Dir {
         [Up, Right, Down, Left].iter().copied()
     }
     pub fn as_delta(self) -> (isize, isize) {
-        [(0, -1), (1, 0), (0, 1), (-1, 0)][self.num()]
+        [(0, -1), (1, 0), (0, 1), (-1, 0)][self as usize]
     }
     pub fn checked_add(self, pos: (usize, usize)) -> Option<(usize, usize)> {
         let delta = self.as_delta();
@@ -58,23 +60,14 @@ impl Dir {
             Dir::Up
         }
     }
-    pub fn from_char(c: char) -> Result<Dir, String> {
-        match c {
-            'N' | 'n' | 'U' | 'u' | '^' => Ok(Dir::Up),
-            'E' | 'e' | 'R' | 'r' | '>' => Ok(Dir::Right),
-            'S' | 's' | 'D' | 'd' | 'v' => Ok(Dir::Down),
-            'W' | 'w' | 'L' | 'l' | '<' => Ok(Dir::Left),
-            c => Err(format!("Not a Dir: '{}'", c)),
-        }
-    }
     pub fn to_char(self) -> char {
-        ['U', 'R', 'D', 'L'][self.num()]
+        ['U', 'R', 'D', 'L'][self as usize]
     }
     pub fn to_char_arrow(self) -> char {
-        ['^', '>', 'v', '<'][self.num()]
+        ['^', '>', 'v', '<'][self as usize]
     }
     pub fn to_char_cardinal(self) -> char {
-        ['N', 'E', 'S', 'W'][self.num()]
+        ['N', 'E', 'S', 'W'][self as usize]
     }
 
     pub fn is_vertical(&self) -> bool {
@@ -85,39 +78,10 @@ impl Dir {
     }
 }
 
-impl FromStr for Dir {
-    type Err = String;
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        match s {
-            "Up" | "up" => Ok(Dir::Up),
-            "Right" | "right" => Ok(Dir::Right),
-            "Down" | "down" => Ok(Dir::Down),
-            "Left" | "left" => Ok(Dir::Left),
-            c if c.len() == 1 => Dir::from_char(c.chars().next().unwrap()),
-            s => Err(format!("Not a Dir: {:?}", s)),
-        }
+impl std::fmt::Display for Dir {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.to_char())
     }
-}
-
-impl From<String> for Dir {
-    fn from(s: String) -> Self {
-        Self::from_str(&s).unwrap()
-    }
-}
-impl From<&'_ str> for Dir {
-    fn from(s: &'_ str) -> Self {
-        Self::from_str(s).unwrap()
-    }
-}
-
-impl From<char> for Dir {
-    fn from(c: char) -> Self {
-        Self::from_char(c).unwrap()
-    }
-}
-
-impl sscanf::RegexRepresentation for Dir {
-    const REGEX: &'static str = "[Uu]p|[Dd]own|[Ll]eft|[Rr]ight|[NnUuEeRrSsDdEeLl^>v<]";
 }
 
 macro_rules! impl_dir_ops {
