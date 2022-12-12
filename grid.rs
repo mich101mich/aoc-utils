@@ -461,6 +461,16 @@ impl Grid<char> {
         }
     }
 }
+impl Grid<u8> {
+    pub fn print(&self) {
+        for row in self.iter() {
+            for c in row {
+                print!("{}", *c as char);
+            }
+            println!();
+        }
+    }
+}
 impl<T> Grid<T> {
     pub fn print_any<D: std::fmt::Display>(&self, f: impl Fn(&T) -> D) {
         for row in self.iter() {
@@ -594,10 +604,17 @@ pub fn char_grid(input: &str) -> Grid<char> {
         .to_vec()
         .into()
 }
+pub fn byte_grid(input: &str) -> Grid<u8> {
+    input
+        .lines()
+        .map(|line| line.bytes().to_vec())
+        .to_vec()
+        .into()
+}
 pub fn digit_grid(input: &str) -> Grid<usize> {
     input
         .lines()
-        .map(|line| line.chars().map(parse_c).to_vec())
+        .map(|line| line.bytes().map(|n| (n - b'0') as usize).to_vec())
         .to_vec()
         .into()
 }
