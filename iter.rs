@@ -40,14 +40,10 @@ pub trait IterExt<T> {
         P: FnMut(&T) -> bool,
         Self: Iterator<Item = T> + Sized,
     {
-        self.split_fold(
-            predicate,
-            || vec![],
-            |mut v, t| {
-                v.push(t);
-                v
-            },
-        )
+        self.split_fold(predicate, Vec::new, |mut v, t| {
+            v.push(t);
+            v
+        })
     }
 }
 impl<T, I: Iterator<Item = T>> IterExt<T> for I {
@@ -161,5 +157,122 @@ where
             let (_, upper) = self.iter.size_hint();
             (0, upper) // can't know a lower bound, due to the predicate
         }
+    }
+}
+
+pub fn manhattan_ring_iter(center: (isize, isize), radius: isize) -> ManhattanRingIterator {
+    ManhattanRingIterator {
+        center,
+        radius,
+        current: Some((center.0, center.1 - radius)),
+        side: Dir::Up,
+    }
+}
+
+pub struct ManhattanRingIterator {
+    center: (isize, isize),
+    radius: isize,
+    current: Option<(isize, isize)>,
+    side: Dir,
+}
+
+impl Iterator for ManhattanRingIterator {
+    type Item = (isize, isize);
+
+    fn next(&mut self) -> Option<Self::Item> {
+        let mut current = self.current?;
+
+        let (delta, target) = match self.side {
+            Dir::Up => ((1, 1), (self.center.0 + self.radius, self.center.1)),
+            Dir::Right => ((-1, 1), (self.center.0, self.center.1 + self.radius)),
+            Dir::Down => ((-1, -1), (self.center.0 - self.radius, self.center.1)),
+            Dir::Left => ((1, -1), (self.center.0, self.center.1 - self.radius)),
+        };
+
+        current.0 += delta.0;
+        current.1 += delta.1;
+        if current == target {
+            self.side = self.side.clockwise();
+            if self.side == Dir::Up {
+                self.current = None;
+                return None;
+            }
+        }
+        self.current = Some(current);
+        Some(current)
+    }
+}
+
+pub fn square_ring_delta_iterator(
+    center: (isize, isize),
+    radius: isize,
+) -> SquareRingDeltaIterator {
+    SquareRingDeltaIterator {
+        center,
+        radius,
+        current: Some((center.0 - radius, center.1 - radius)),
+        side: Dir::Up,
+    }
+}
+
+pub struct SquareRingDeltaIterator {
+    center: (isize, isize),
+    radius: isize,
+    current: Option<(isize, isize)>,
+    side: Dir,
+}
+
+impl Iterator for SquareRingDeltaIterator {
+    type Item = (isize, isize);
+
+    fn next(&mut self) -> Option<Self::Item> {
+        let mut current = self.current?;
+
+        let (delta, target) = match self.side {
+            Dir::Up => (
+                (1, 0),
+                (self.center.0 + self.radius, self.center.1 - self.radius),
+            ),
+            Dir::Right => (
+                (0, 1),
+                (self.center.0 + self.radius, self.center.1 + self.radius),
+            ),
+            Dir::Down => (
+                (-1, 0),
+                (self.center.0 - self.radius, self.center.1 + self.radius),
+            ),
+            Dir::Left => (
+                (0, -1),
+                (self.center.0 - self.radius, self.center.1 - self.radius),
+            ),
+        };
+
+        current.0 += delta.0;
+        current.1 += delta.1;
+        if current == target {
+            self.side = self.side.clockwise();
+            if self.side == Dir::Up {
+                self.current = None;
+                return None;
+            }
+        }
+        self.current = Some(current);
+        Some((current.0 - self.center.0, current.1 - self.center.1))
+    }
+}
+
+pub fn square_ring_iterator(center: (isize, isize), radius: isize) -> SquareRingIterator {
+    SquareRingIterator(square_ring_delta_iterator(center, radius))
+}
+
+pub struct SquareRingIterator(SquareRingDeltaIterator);
+
+impl Iterator for SquareRingIterator {
+    type Item = (isize, isize);
+
+    fn next(&mut self) -> Option<Self::Item> {
+        self.0
+            .next()
+            .map(|(dx, dy)| (self.0.center.0 + dx, self.0.center.1 + dy))
     }
 }

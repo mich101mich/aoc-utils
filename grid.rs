@@ -137,7 +137,7 @@ impl<T> Grid<T> {
     pub fn checked_move(&self, pos: Point, dir: Dir) -> Option<Point> {
         dir.bounded_add(pos, self.bounds())
     }
-    pub fn dir_iter<'a>(&'a self, start: Point, dir: Dir) -> impl Iterator<Item = Point> + 'a {
+    pub fn dir_iter(&self, start: Point, dir: Dir) -> impl Iterator<Item = Point> + '_ {
         std::iter::successors(self.checked_move(start, dir), move |&p| {
             self.checked_move(p, dir)
         })
@@ -249,22 +249,18 @@ impl<T> Grid<T> {
         (x, y): Point,
         radius: usize,
     ) -> impl Iterator<Item = (Point, (isize, isize))> + '_ {
-        let radius = radius as isize;
-        let x = x as isize;
-        let y = y as isize;
-        (-radius..=radius)
-            .map(move |dx| (dx, -radius))
-            .chain((-radius + 1..radius).map(move |dy| (-radius, dy)))
-            .chain((-radius + 1..radius).map(move |dy| (radius, dy)))
-            .chain((-radius..=radius).map(move |dx| (dx, radius)))
-            .filter_map(move |(dx, dy)| self.map_bounds((x + dx, y + dy)).map(|p| (p, (dx, dy))))
+        square_ring_delta_iterator((x as isize, y as isize), radius as isize).filter_map(move |d| {
+            let p = (x as isize + d.0, y as isize + d.1);
+            self.map_bounds(p).map(|p| (p, d))
+        })
     }
     pub fn square_ring_iterator(
         &self,
-        pos: Point,
+        (x, y): Point,
         radius: usize,
     ) -> impl Iterator<Item = Point> + '_ {
-        self.square_ring_delta_iterator(pos, radius).map(|(p, _)| p)
+        square_ring_iterator((x as isize, y as isize), radius as isize)
+            .filter_map(move |p| self.map_bounds(p))
     }
 
     pub fn dijkstra(
@@ -369,6 +365,7 @@ impl<T> Grid<T> {
         // }
     }
 
+    #[allow(clippy::needless_lifetimes)]
     pub fn two_muts<'a>(&'a mut self, a: Point, b: Point) -> Option<(&'a mut T, &'a mut T)> {
         if a == b {
             None

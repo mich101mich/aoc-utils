@@ -75,6 +75,7 @@ pub fn comma_values<T: FromStr>(input: &str) -> Vec<T> {
 
 pub trait SliceExt {
     type Item;
+    #[allow(clippy::needless_lifetimes)]
     fn two_muts<'a>(
         &'a mut self,
         a: usize,
@@ -84,6 +85,7 @@ pub trait SliceExt {
 
 impl<T> SliceExt for [T] {
     type Item = T;
+    #[allow(clippy::needless_lifetimes)]
     fn two_muts<'a>(
         &'a mut self,
         a: usize,
