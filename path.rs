@@ -66,7 +66,20 @@ impl<'b, Id> IntoIdCost<Id> for (Id, &'b Cost) {
 }
 
 #[derive(PartialEq, Eq)]
-struct Element<Id>(Id, Cost, Cost);
+struct Element<Id> {
+    id: Id,
+    cost: Cost,
+    total_heuristic: Cost,
+}
+impl<Id> Element<Id> {
+    fn new(id: Id, cost: Cost, heuristic: Cost) -> Element<Id> {
+        Element {
+            id,
+            cost,
+            total_heuristic: cost + heuristic,
+        }
+    }
+}
 impl<Id: Eq> PartialOrd for Element<Id> {
     fn partial_cmp(&self, rhs: &Element<Id>) -> Option<Ordering> {
         Some(self.cmp(rhs))
@@ -74,7 +87,59 @@ impl<Id: Eq> PartialOrd for Element<Id> {
 }
 impl<Id: Eq> Ord for Element<Id> {
     fn cmp(&self, rhs: &Element<Id>) -> Ordering {
-        rhs.2.cmp(&self.2)
+        rhs.total_heuristic.cmp(&self.total_heuristic) // reverse order for max-heap
+    }
+}
+
+struct Visited<Id>(HashMap<Id, (Cost, Id)>);
+
+impl<Id> Visited<Id>
+where
+    Id: Copy + Eq + Hash,
+{
+    fn new() -> Self {
+        Visited(HashMap::new())
+    }
+    fn update(&mut self, id: Id, cost: Cost, prev: Id) -> bool {
+        match self.0.entry(id) {
+            Entry::Occupied(mut entry) => {
+                if entry.get().0 <= cost {
+                    false
+                } else {
+                    *entry.get_mut() = (cost, prev);
+                    true
+                }
+            }
+            Entry::Vacant(entry) => {
+                entry.insert((cost, prev));
+                true
+            }
+        }
+    }
+    fn get(&self, id: Id) -> Option<(Cost, Id)> {
+        self.0.get(&id).copied()
+    }
+    fn cost(&self, id: Id) -> Option<Cost> {
+        self.0.get(&id).map(|(cost, _)| *cost)
+    }
+    fn prev(&self, id: Id) -> Option<Id> {
+        self.0.get(&id).map(|(_, prev)| *prev)
+    }
+
+    fn path(&self, start: Id, goal: Id) -> Option<Path<Id>> {
+        let cost = self.cost(goal)?;
+
+        let mut steps = vec![];
+        let mut current = goal;
+
+        while current != start {
+            steps.push(current);
+            current = self.prev(current)?;
+        }
+        steps.push(start);
+        steps.reverse();
+
+        Some(Path::new(steps, cost))
     }
 }
 
@@ -92,67 +157,38 @@ where
         return Some(Path::new(vec![start, start], 0));
     }
 
-    let mut visited = HashMap::new();
+    let mut visited = Visited::new();
+    visited.update(start, 0, start);
+
     let mut next = BinaryHeap::new();
-    next.push(Element(start, 0, 0));
-    visited.insert(start, (0, start));
+    next.push(Element::new(start, 0, heuristic(start)));
 
     let mut neighbors = vec![];
 
-    while let Some(Element(current_id, current_cost, _)) = next.pop() {
-        if current_id == goal {
-            break;
-        }
-        match current_cost.cmp(&visited[&current_id].0) {
+    while let Some(current) = next.pop() {
+        match current.cost.cmp(&visited.cost(current.id).unwrap()) {
             Ordering::Greater => continue,
             Ordering::Equal => {}
-            Ordering::Less => panic!("Went from {} to {}", current_cost, visited[&current_id].0),
+            Ordering::Less => unreachable!("invalid arrangement of costs"),
+        }
+
+        if current.id == goal {
+            break;
         }
 
         neighbors.clear();
-        get_all_neighbors(current_id, &mut neighbors);
+        get_all_neighbors(current.id, &mut neighbors);
         for other in neighbors.drain(..) {
             let (other_id, delta_cost) = other.into_id_cost();
-            let other_cost = current_cost + delta_cost;
+            let other_cost = current.cost + delta_cost;
 
-            let mut needs_visit = true;
-            if let Some((prev_cost, prev_id)) = visited.get_mut(&other_id) {
-                if *prev_cost > other_cost {
-                    *prev_cost = other_cost;
-                    *prev_id = current_id;
-                } else {
-                    needs_visit = false;
-                }
-            } else {
-                visited.insert(other_id, (other_cost, current_id));
-            }
-
-            if needs_visit {
-                let heuristic = heuristic(other_id);
-                next.push(Element(other_id, other_cost, other_cost + heuristic));
+            if visited.update(other_id, other_cost, current.id) {
+                next.push(Element::new(other_id, other_cost, heuristic(other_id)));
             }
         }
     }
 
-    if !visited.contains_key(&goal) {
-        return None;
-    }
-
-    let steps = {
-        let mut steps = vec![];
-        let mut current = goal;
-
-        while current != start {
-            steps.push(current);
-            let (_, prev) = visited[&current];
-            current = prev;
-        }
-        steps.push(start);
-        steps.reverse();
-        steps
-    };
-
-    Some(Path::new(steps, visited[&goal].0))
+    visited.path(start, goal)
 }
 
 pub fn dijkstra_search<Id, IdCost>(
@@ -168,73 +204,94 @@ where
         return HashMap::new();
     }
 
-    let mut visited = HashMap::new();
+    let mut visited = Visited::new();
+    visited.update(start, 0, start);
+
     let mut next = BinaryHeap::new();
-    next.push(Element(start, 0, 0));
-    visited.insert(start, (0, start));
+    next.push(Element::new(start, 0, 0));
 
     let mut remaining_goals = goals.iter().copied().to_set();
 
-    let mut goal_costs = HashMap::with_capacity(goals.len());
-
     let mut neighbors = vec![];
 
-    while let Some(Element(current_id, current_cost, _)) = next.pop() {
-        match current_cost.cmp(&visited[&current_id].0) {
+    while let Some(current) = next.pop() {
+        match current.cost.cmp(&visited.cost(current.id).unwrap()) {
             Ordering::Greater => continue,
             Ordering::Equal => {}
-            Ordering::Less => panic!("Went from {} to {}", current_cost, visited[&current_id].0),
+            Ordering::Less => unreachable!("invalid arrangement of costs"),
         }
 
-        if remaining_goals.remove(&current_id) {
-            goal_costs.insert(current_id, current_cost);
-            if remaining_goals.is_empty() {
-                break;
-            }
+        if remaining_goals.remove(&current.id) && remaining_goals.is_empty() {
+            break;
         }
 
         neighbors.clear();
-        get_all_neighbors(current_id, &mut neighbors);
+        get_all_neighbors(current.id, &mut neighbors);
         for other in neighbors.drain(..) {
             let (other_id, delta_cost) = other.into_id_cost();
-            let other_cost = current_cost + delta_cost;
+            let other_cost = current.cost + delta_cost;
 
-            let mut needs_visit = true;
-            if let Some((prev_cost, prev_id)) = visited.get_mut(&other_id) {
-                if *prev_cost > other_cost {
-                    *prev_cost = other_cost;
-                    *prev_id = current_id;
-                } else {
-                    needs_visit = false;
-                }
-            } else {
-                visited.insert(other_id, (other_cost, current_id));
-            }
-
-            if needs_visit {
-                next.push(Element(other_id, other_cost, other_cost));
+            if visited.update(other_id, other_cost, current.id) {
+                next.push(Element::new(other_id, other_cost, 0));
             }
         }
     }
 
-    let mut goal_data = HashMap::with_capacity(goal_costs.len());
+    if remaining_goals.len() == goals.len() {
+        return HashMap::new();
+    }
 
-    for (&goal, &cost) in goal_costs.iter() {
-        let steps = {
-            let mut steps = vec![];
-            let mut current = goal;
+    let mut goal_data = HashMap::with_capacity(goals.len() - remaining_goals.len());
 
-            while current != start {
-                steps.push(current);
-                let (_, prev) = visited[&current];
-                current = prev;
-            }
-            steps.push(start);
-            steps.reverse();
-            steps
-        };
-        goal_data.insert(goal, Path::new(steps, cost));
+    for &goal in goals {
+        if let Some(path) = visited.path(start, goal) {
+            goal_data.insert(goal, path);
+        }
     }
 
     goal_data
+}
+
+pub fn open_dijkstra<Id, IdCost, F>(
+    mut get_all_neighbors: impl FnMut(Id, &mut Vec<IdCost>),
+    start: Id,
+    mut is_goal: F,
+) -> Option<Path<Id>>
+where
+    Id: Copy + Eq + Hash,
+    IdCost: IntoIdCost<Id>,
+    F: FnMut(Id, Cost) -> bool,
+{
+    let mut visited = Visited::new();
+    visited.update(start, 0, start);
+
+    let mut next = BinaryHeap::new();
+    next.push(Element::new(start, 0, 0));
+
+    let mut neighbors = vec![];
+
+    while let Some(current) = next.pop() {
+        match current.cost.cmp(&visited.cost(current.id).unwrap()) {
+            Ordering::Greater => continue,
+            Ordering::Equal => {}
+            Ordering::Less => unreachable!("invalid arrangement of costs"),
+        }
+
+        if is_goal(current.id, current.cost) {
+            return visited.path(start, current.id);
+        }
+
+        neighbors.clear();
+        get_all_neighbors(current.id, &mut neighbors);
+        for other in neighbors.drain(..) {
+            let (other_id, delta_cost) = other.into_id_cost();
+            let other_cost = current.cost + delta_cost;
+
+            if visited.update(other_id, other_cost, current.id) {
+                next.push(Element::new(other_id, other_cost, 0));
+            }
+        }
+    }
+
+    None
 }

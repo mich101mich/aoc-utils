@@ -32,6 +32,7 @@ pub trait IterExt<T> {
         }
     }
 
+    #[allow(clippy::type_complexity)]
     fn split_to_vec<P>(
         self,
         predicate: P,
