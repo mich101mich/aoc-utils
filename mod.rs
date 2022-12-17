@@ -213,3 +213,36 @@ pub fn detect_loop<T: Hash + std::cmp::Eq>(total_iterations: u128, mut f: impl F
         .unwrap()
         .0
 }
+
+pub fn detect_increment_loop<T: Hash + std::cmp::Eq>(
+    total_iterations: u128,
+    mut f: impl FnMut() -> (T, i128),
+    min_runs: u128,
+) -> i128 {
+    let mut seen = HashMap::<T, (u128, i128)>::new();
+    let mut offset = None;
+    let mut i = 0;
+    let mut x = 0;
+    while i < total_iterations {
+        let res = f();
+        x = res.1;
+        i += 1;
+        if i < min_runs || offset.is_some() {
+            continue;
+        }
+        match seen.entry(res.0) {
+            Entry::Occupied(e) => {
+                let (prev, prev_x) = *e.get();
+                let loop_len = i - prev;
+                let loop_gain = x - prev_x;
+                let loops_remaining = (total_iterations - i) / loop_len;
+                i += loops_remaining * loop_len;
+                offset = Some(loops_remaining as i128 * loop_gain);
+            }
+            Entry::Vacant(e) => {
+                e.insert((i, x));
+            }
+        }
+    }
+    x + offset.unwrap_or(0)
+}

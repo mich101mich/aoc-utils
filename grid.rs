@@ -446,6 +446,9 @@ impl Grid<bool> {
     pub fn count(&mut self) -> usize {
         self.count_with(|t| *t)
     }
+    pub fn pos_iter(&self) -> impl Iterator<Item = Point> + '_ {
+        self.grid_iter_index().filter_map(|(p, t)| t.then_some(p))
+    }
 }
 
 impl Grid<char> {
