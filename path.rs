@@ -252,15 +252,18 @@ where
     goal_data
 }
 
-pub fn open_dijkstra<Id, IdCost, F>(
-    mut get_all_neighbors: impl FnMut(Id, &mut Vec<IdCost>),
-    start: Id,
-    mut is_goal: F,
-) -> Option<Path<Id>>
+/// A version of Dijkstra's algorithm with manual termination instead of a goal.
+///
+/// ## Arguments
+/// - `find_goal`: A function to check if a position is a goal, or to get its neighbors.
+///   - Arguments: `pos`: current position, `out`: a vector to write neighbors to
+///   - Returns: `true` if the search should terminate
+/// - `start`: The starting position.
+pub fn open_dijkstra<Id, IdCost, F>(mut find_goal: F, start: Id) -> Option<Path<Id>>
 where
     Id: Copy + Eq + Hash,
     IdCost: IntoIdCost<Id>,
-    F: FnMut(Id, Cost) -> bool,
+    F: FnMut(Id, &mut Vec<IdCost>) -> bool,
 {
     let mut visited = Visited::new();
     visited.update(start, 0, start);
@@ -277,12 +280,11 @@ where
             Ordering::Less => unreachable!("invalid arrangement of costs"),
         }
 
-        if is_goal(current.id, current.cost) {
+        neighbors.clear();
+        if find_goal(current.id, &mut neighbors) {
             return visited.path(start, current.id);
         }
 
-        neighbors.clear();
-        get_all_neighbors(current.id, &mut neighbors);
         for other in neighbors.drain(..) {
             let (other_id, delta_cost) = other.into_id_cost();
             let other_cost = current.cost + delta_cost;
