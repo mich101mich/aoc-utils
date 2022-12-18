@@ -7,23 +7,27 @@ pub use std::convert::{TryFrom, TryInto};
 pub use std::io::{BufRead, BufReader, BufWriter, Read, Write};
 pub use std::str::FromStr;
 
+pub use cgmath::{prelude::*, vec2 as p2, vec3 as p3};
 pub use rand::prelude::*;
 pub use rayon::prelude::*;
 pub use regex::Regex;
 pub use sscanf::*;
 
-mod neighbors;
-pub use neighbors::*;
-mod path;
-pub use path::*;
 mod dir;
-pub use dir::*;
 mod grid;
-pub use grid::*;
 mod int_code;
-pub use int_code::*;
 mod iter;
+mod neighbors;
+mod path;
+mod point;
+
+pub use dir::*;
+pub use grid::*;
+pub use int_code::*;
 pub use iter::*;
+pub use neighbors::*;
+pub use path::*;
+pub use point::*;
 
 use std::cmp::Eq;
 use std::hash::Hash;
@@ -108,10 +112,10 @@ impl<T> SliceExt for [T] {
 }
 
 pub trait DiffExt {
-    fn diff(self, other: usize) -> usize;
+    fn abs_diff(self, other: Self) -> Self;
 }
-impl DiffExt for usize {
-    fn diff(self, other: usize) -> usize {
+impl<T: cgmath::BaseNum> DiffExt for T {
+    fn abs_diff(self, other: T) -> T {
         if self > other {
             self - other
         } else {
@@ -120,32 +124,8 @@ impl DiffExt for usize {
     }
 }
 
-pub fn diff(a: usize, b: usize) -> usize {
-    a.diff(b)
-}
-pub fn diff_i(a: isize, b: isize) -> isize {
-    (a - b).abs()
-}
-
-pub fn manhattan(p1: (usize, usize), p2: (usize, usize)) -> usize {
-    p1.0.diff(p2.0) + p1.1.diff(p2.1)
-}
-pub fn manhattan_i(p1: (isize, isize), p2: (isize, isize)) -> isize {
-    diff_i(p1.0, p2.0) + diff_i(p1.1, p2.1)
-}
-
-pub fn manhattan_3d(p1: (usize, usize, usize), p2: (usize, usize, usize)) -> usize {
-    p1.0.diff(p2.0) + p1.1.diff(p2.1) + p1.2.diff(p2.2)
-}
-pub fn manhattan_3d_i(p1: (isize, isize, isize), p2: (isize, isize, isize)) -> isize {
-    diff_i(p1.0, p2.0) + diff_i(p1.1, p2.1) + diff_i(p1.2, p2.2)
-}
-
-pub fn moore(p1: (usize, usize), p2: (usize, usize)) -> usize {
-    p1.0.diff(p2.0).max(p1.1.diff(p2.1))
-}
-pub fn moore_i(p1: (isize, isize), p2: (isize, isize)) -> isize {
-    diff_i(p1.0, p2.0).max(diff_i(p1.1, p2.1))
+pub fn abs_diff<T: cgmath::BaseNum>(a: T, b: T) -> T {
+    a.abs_diff(b)
 }
 
 pub fn binary_search(start: usize, mut check: impl FnMut(usize) -> bool) -> usize {

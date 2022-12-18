@@ -1,8 +1,7 @@
 #![allow(unused)]
 //! A crate with the most common Neighborhoods
 
-pub type Point = (usize, usize);
-use std::fmt::Debug;
+use super::*;
 
 /// Defines how a Path can move along the Grid.
 ///
@@ -19,7 +18,7 @@ use std::fmt::Debug;
 /// up, down, left or right
 /// - [`MooreNeighborhood`] for Agents that can move
 /// up, down, left, right, as well as the 4 diagonals (up-right, ...)
-pub trait Neighborhood: Clone + Debug {
+pub trait Neighborhood: Clone + std::fmt::Debug {
     /// Provides a list of Neighbors of a Point
     ///
     /// Note that it is not necessary to check weather the Tile at a Point is solid or not.
@@ -64,28 +63,19 @@ impl ManhattanNeighborhood {
 
 impl Neighborhood for ManhattanNeighborhood {
     fn get_all_neighbors(&self, point: Point) -> Box<dyn Iterator<Item = Point>> {
-        let (width, height) = (self.width, self.height);
-
-        let iter = [(0isize, -1isize), (1, 0), (0, 1), (-1, 0)]
-            .iter()
-            .map(move |(dx, dy)| (point.0 as isize + dx, point.1 as isize + dy))
-            .filter(move |(x, y)| {
-                *x >= 0 && *y >= 0 && (*x as usize) < width && (*y as usize) < height
-            })
-            .map(|(x, y)| (x as usize, y as usize));
-
-        Box::new(iter)
+        let bounds = p2(self.width, self.height);
+        Box::new(super::Dir::all().filter_map(move |d| d.bounded_add(point, bounds)))
     }
     fn heuristic(&self, point: Point, goal: Point) -> usize {
-        let diff_0 = if goal.0 > point.0 {
-            goal.0 - point.0
+        let diff_0 = if goal.x > point.x {
+            goal.x - point.x
         } else {
-            point.0 - goal.0
+            point.x - goal.x
         };
-        let diff_1 = if goal.1 > point.1 {
-            goal.1 - point.1
+        let diff_1 = if goal.y > point.y {
+            goal.y - point.y
         } else {
-            point.1 - goal.1
+            point.y - goal.y
         };
         diff_0 + diff_1
     }
@@ -134,53 +124,27 @@ impl Neighborhood for MooreNeighborhood {
             (-1, -1),
         ]
         .iter()
-        .map(move |(dx, dy)| (point.0 as isize + dx, point.1 as isize + dy))
-        .filter(move |(x, y)| *x >= 0 && *y >= 0 && (*x as usize) < width && (*y as usize) < height)
-        .map(|(x, y)| (x as usize, y as usize));
+        .filter_map(move |(dx, dy)| {
+            Some(p2(
+                point.x.checked_add_signed(*dx)?,
+                point.y.checked_add_signed(*dy)?,
+            ))
+        })
+        .filter(move |p| p.x < width && p.y < height);
 
         Box::new(iter)
     }
     fn heuristic(&self, point: Point, goal: Point) -> usize {
-        let diff_0 = if goal.0 > point.0 {
-            goal.0 - point.0
+        let diff_0 = if goal.x > point.x {
+            goal.x - point.x
         } else {
-            point.0 - goal.0
+            point.x - goal.x
         };
-        let diff_1 = if goal.1 > point.1 {
-            goal.1 - point.1
+        let diff_1 = if goal.y > point.y {
+            goal.y - point.y
         } else {
-            point.1 - goal.1
+            point.y - goal.y
         };
         diff_0.max(diff_1)
     }
-}
-
-#[test]
-fn test_manhattan_get_all_neighbors() {
-    let neighborhood = ManhattanNeighborhood::new(5, 5);
-    assert_eq!(
-        neighborhood.get_all_neighbors((0, 2)).collect::<Vec<_>>(),
-        vec![(0, 1), (1, 2), (0, 3)],
-    );
-}
-
-#[test]
-fn test_manhattan_heuristic() {
-    let neighborhood = ManhattanNeighborhood::new(5, 5);
-    assert_eq!(neighborhood.heuristic((3, 1), (0, 0)), 3 + 1);
-}
-
-#[test]
-fn test_moore_get_all_neighbors() {
-    let neighborhood = MooreNeighborhood::new(5, 5);
-    assert_eq!(
-        neighborhood.get_all_neighbors((0, 2)).collect::<Vec<_>>(),
-        vec![(0, 1), (1, 1), (1, 2), (1, 3), (0, 3)],
-    );
-}
-
-#[test]
-fn test_moore_heuristic() {
-    let neighborhood = MooreNeighborhood::new(5, 5);
-    assert_eq!(neighborhood.heuristic((3, 1), (0, 0)), 3);
 }

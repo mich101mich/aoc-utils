@@ -7,62 +7,69 @@ impl<T> Grid<T> {
     pub fn new() -> Self {
         Self(vec![])
     }
-    pub fn new_default((w, h): Point) -> Self
+    pub fn new_default(size: Point) -> Self
     where
         T: Default,
     {
         Self(
-            std::iter::repeat_with(|| std::iter::repeat_with(Default::default).take(w).to_vec())
-                .take(h)
-                .to_vec(),
+            std::iter::repeat_with(|| {
+                std::iter::repeat_with(Default::default)
+                    .take(size.x)
+                    .to_vec()
+            })
+            .take(size.y)
+            .to_vec(),
         )
     }
-    pub fn new_clone((w, h): Point, src: T) -> Self
+    pub fn new_clone(size: Point, src: T) -> Self
     where
         T: Clone,
     {
-        Self(vec![vec![src; w]; h])
+        Self(vec![vec![src; size.x]; size.y])
     }
 
-    pub fn extend_default(&mut self, (w, h): Point)
+    pub fn extend_default(&mut self, size: Point)
     where
         T: Default,
     {
-        if w > self.w() {
-            let diff = w - self.w();
+        if size.x > self.w() {
+            let diff = size.x - self.w();
             for row in &mut self.0 {
                 row.extend(std::iter::repeat_with(Default::default).take(diff));
             }
         }
-        while h > self.h() {
-            self.0
-                .push(std::iter::repeat_with(Default::default).take(w).to_vec());
+        while size.y > self.h() {
+            self.0.push(
+                std::iter::repeat_with(Default::default)
+                    .take(size.x)
+                    .to_vec(),
+            );
         }
     }
-    pub fn extend_by_default(&mut self, (dw, dh): Point)
+    pub fn extend_by_default(&mut self, delta: Point)
     where
         T: Default,
     {
-        self.extend_default((self.w() + dw, self.h() + dh));
+        self.extend_default(self.bounds() + delta);
     }
-    pub fn extend_clone(&mut self, (w, h): Point, src: T)
+    pub fn extend_clone(&mut self, size: Point, src: T)
     where
         T: Clone,
     {
-        if w > self.w() {
+        if size.x > self.w() {
             for row in &mut self.0 {
-                row.resize(w, src.clone());
+                row.resize(size.x, src.clone());
             }
         }
-        while h > self.h() {
-            self.0.push(vec![src.clone(); w]);
+        while size.y > self.h() {
+            self.0.push(vec![src.clone(); size.x]);
         }
     }
-    pub fn extend_by_clone(&mut self, (dw, dh): Point, src: T)
+    pub fn extend_by_clone(&mut self, delta: Point, src: T)
     where
         T: Clone,
     {
-        self.extend_clone((self.w() + dw, self.h() + dh), src);
+        self.extend_clone(self.bounds() + delta, src);
     }
 
     pub fn w(&self) -> usize {
@@ -72,28 +79,22 @@ impl<T> Grid<T> {
         self.len()
     }
     pub fn size(&self) -> Point {
-        (self.w(), self.h())
+        p2(self.w(), self.h())
     }
     pub fn bounds(&self) -> Point {
         self.size()
     }
 
-    pub fn in_bounds(&self, (x, y): (isize, isize)) -> bool {
-        x >= 0 && y >= 0 && x < self.w() as isize && y < self.h() as isize
+    pub fn in_bounds<S: cgmath::BaseNum>(&self, p: cgmath::Vector2<S>) -> bool {
+        self.map_bounds(p).is_some()
     }
-    pub fn contains(&self, (x, y): Point) -> bool {
-        x < self.w() && y < self.h()
-    }
-    pub fn map_bounds(&self, (x, y): (isize, isize)) -> Option<Point> {
-        if x < 0 || y < 0 || x >= self.w() as isize || y >= self.h() as isize {
-            return None;
-        }
-        Some((x as usize, y as usize))
+    pub fn map_bounds<S: cgmath::BaseNum>(&self, p: cgmath::Vector2<S>) -> Option<Point> {
+        p.cast::<usize>().filter(|p| p.less_than(self.bounds()))
     }
 
     pub fn grid_index_iter(&self) -> impl Iterator<Item = Point> {
-        let (w, h) = self.bounds();
-        (0..h).flat_map(move |x| (0..w).map(move |y| (x, y)))
+        let size = self.bounds();
+        (0..size.y).flat_map(move |x| (0..size.x).map(move |y| p2(x, y)))
     }
     pub fn grid_iter(&self) -> impl Iterator<Item = &T> {
         self.0.iter().flat_map(|r| r.iter())
@@ -105,20 +106,20 @@ impl<T> Grid<T> {
         self.0
             .iter()
             .enumerate()
-            .flat_map(|(y, r)| r.iter().enumerate().map(move |(x, v)| ((x, y), v)))
+            .flat_map(|(y, r)| r.iter().enumerate().map(move |(x, v)| (p2(x, y), v)))
     }
     pub fn grid_iter_mut_index(&mut self) -> impl Iterator<Item = (Point, &mut T)> {
         self.0
             .iter_mut()
             .enumerate()
-            .flat_map(|(y, r)| r.iter_mut().enumerate().map(move |(x, v)| ((x, y), v)))
+            .flat_map(|(y, r)| r.iter_mut().enumerate().map(move |(x, v)| (p2(x, y), v)))
     }
 
-    pub fn get(&self, (x, y): Point) -> Option<&T> {
-        self.0.get(y).and_then(move |v| v.get(x))
+    pub fn get<S: cgmath::BaseNum>(&self, p: cgmath::Vector2<S>) -> Option<&T> {
+        self.map_bounds(p).map(|p| &self.0[p.y][p.x])
     }
-    pub fn get_mut(&mut self, (x, y): Point) -> Option<&mut T> {
-        self.0.get_mut(y).and_then(move |v| v.get_mut(x))
+    pub fn get_mut<S: cgmath::BaseNum>(&mut self, p: cgmath::Vector2<S>) -> Option<&mut T> {
+        self.map_bounds(p).map(move |p| &mut self.0[p.y][p.x])
     }
 
     pub fn row(&self, y: usize) -> impl DoubleEndedIterator<Item = &T> {
@@ -147,23 +148,17 @@ impl<T> Grid<T> {
     where
         T: PartialEq,
     {
-        self.0.iter().enumerate().find_map(|(y, row)| {
-            row.iter()
-                .enumerate()
-                .find(|(_, v)| **v == t)
-                .map(move |(x, _)| (x, y))
-        })
+        self.grid_iter_index()
+            .find(move |(_, v)| **v == t)
+            .map(|(p, _)| p)
     }
     pub fn find_all(&self, t: T) -> impl Iterator<Item = Point> + '_
     where
         T: PartialEq,
     {
-        self.0
-            .iter()
-            .enumerate()
-            .flat_map(move |(y, row)| row.iter().enumerate().map(move |(x, v)| (x, y, v)))
-            .filter(move |(_, _, v)| **v == t)
-            .map(move |(x, y, _)| (x, y))
+        self.grid_iter_index()
+            .filter(move |(_, v)| **v == t)
+            .map(|(p, _)| p)
     }
 
     pub fn manhattan(&self) -> ManhattanNeighborhood {
@@ -175,15 +170,15 @@ impl<T> Grid<T> {
 
     pub fn is_on_border(&self, p: Point, border: Dir) -> bool {
         match border {
-            Dir::Left => p.1 == 0,
-            Dir::Up => p.0 == 0,
-            Dir::Right => p.0 == self.w() - 1,
-            Dir::Down => p.1 == self.h() - 1,
+            Dir::Left => p.y == 0,
+            Dir::Up => p.x == 0,
+            Dir::Right => p.x == self.w() - 1,
+            Dir::Down => p.y == self.h() - 1,
         }
     }
     pub fn is_on_any_border(&self, p: Point) -> bool {
-        let (w, h) = self.bounds();
-        p.0 == 0 || p.1 == 0 || p.0 == w - 1 || p.1 == h - 1
+        let size = self.bounds();
+        p.x == 0 || p.y == 0 || p.x == size.x - 1 || p.y == size.y - 1
     }
     pub fn border(&self, border: Dir) -> Box<dyn DoubleEndedIterator<Item = &T> + '_> {
         match border {
@@ -194,10 +189,10 @@ impl<T> Grid<T> {
         }
     }
 
-    pub fn trim_to(&mut self, (w, h): Point) {
-        self.0.truncate(h);
+    pub fn trim_to(&mut self, size: Point) {
+        self.0.truncate(size.y);
         for row in &mut self.0 {
-            row.truncate(w);
+            row.truncate(size.x);
         }
     }
     pub fn trim_with(&mut self, mut empty: impl FnMut(&T) -> bool) -> (usize, usize, usize, usize) {
@@ -246,20 +241,19 @@ impl<T> Grid<T> {
 
     pub fn square_ring_delta_iterator(
         &self,
-        (x, y): Point,
+        p: Point,
         radius: usize,
-    ) -> impl Iterator<Item = (Point, (isize, isize))> + '_ {
-        square_ring_delta_iterator((x as isize, y as isize), radius as isize).filter_map(move |d| {
-            let p = (x as isize + d.0, y as isize + d.1);
-            self.map_bounds(p).map(|p| (p, d))
-        })
+    ) -> impl Iterator<Item = (Point, PointI)> + '_ {
+        let p = p.cast::<isize>().unwrap();
+        square_ring_delta_iterator(p, radius as isize)
+            .filter_map(move |d| self.map_bounds(p + d).map(|p| (p, d)))
     }
     pub fn square_ring_iterator(
         &self,
-        (x, y): Point,
+        p: Point,
         radius: usize,
     ) -> impl Iterator<Item = Point> + '_ {
-        square_ring_iterator((x as isize, y as isize), radius as isize)
+        square_ring_iterator(p.cast::<isize>().unwrap(), radius as isize)
             .filter_map(move |p| self.map_bounds(p))
     }
 
@@ -369,22 +363,22 @@ impl<T> Grid<T> {
     pub fn two_muts<'a>(&'a mut self, a: Point, b: Point) -> Option<(&'a mut T, &'a mut T)> {
         if a == b {
             None
-        } else if a.1 == b.1 {
-            self.0.get_mut(a.1).and_then(|r| r.two_muts(a.0, b.0))
+        } else if a.y == b.y {
+            self.0.get_mut(a.y).and_then(|r| r.two_muts(a.x, b.x))
         } else {
-            self.0.two_muts(a.1, b.1).and_then(|(ra, rb)| {
-                ra.get_mut(a.0)
-                    .and_then(|a| rb.get_mut(b.0).map(|b| (a, b)))
+            self.0.two_muts(a.y, b.y).and_then(|(ra, rb)| {
+                ra.get_mut(a.x)
+                    .and_then(|a| rb.get_mut(b.x).map(|b| (a, b)))
             })
         }
     }
 
     pub fn swap(&mut self, a: Point, b: Point) {
-        if a.1 == b.1 {
-            self.0[a.1].swap(a.0, b.0);
+        if a.y == b.y {
+            self.0[a.y].swap(a.x, b.x);
         } else {
-            let (a_slice, b_slice) = self.0.two_muts(a.1, b.1).unwrap();
-            std::mem::swap(&mut a_slice[a.0], &mut b_slice[b.0]);
+            let (a_slice, b_slice) = self.0.two_muts(a.y, b.y).unwrap();
+            std::mem::swap(&mut a_slice[a.x], &mut b_slice[b.x]);
         }
     }
 
@@ -401,22 +395,22 @@ impl<T> Grid<T> {
     where
         T: Clone,
     {
-        self.0[tl.1..br.1]
+        self.0[tl.y..br.y]
             .iter_mut()
-            .for_each(|row| row[tl.0..br.0].fill(t.clone()));
+            .for_each(|row| row[tl.x..br.x].fill(t.clone()));
     }
     pub fn fill_rect_with(&mut self, tl: Point, br: Point, mut f: impl FnMut(Point) -> T) {
         self.0
             .iter_mut()
             .enumerate()
-            .take(br.1)
-            .skip(tl.1)
+            .take(br.y)
+            .skip(tl.y)
             .for_each(|(y, row)| {
                 row.iter_mut()
                     .enumerate()
-                    .take(br.0)
-                    .skip(tl.0)
-                    .for_each(|(x, cell)| *cell = f((x, y)));
+                    .take(br.x)
+                    .skip(tl.x)
+                    .for_each(|(x, cell)| *cell = f(p2(x, y)));
             });
     }
 
@@ -497,17 +491,17 @@ where
     }
 }
 
-impl<T> Index<Point> for Grid<T> {
+impl<S: cgmath::BaseNum, T> Index<cgmath::Vector2<S>> for Grid<T> {
     type Output = T;
-    fn index(&self, p: Point) -> &Self::Output {
+    fn index(&self, p: cgmath::Vector2<S>) -> &Self::Output {
         match self.get(p) {
             Some(t) => t,
             None => panic!("size is {:?} but index is {:?}", self.size(), p),
         }
     }
 }
-impl<T> IndexMut<Point> for Grid<T> {
-    fn index_mut(&mut self, p: Point) -> &mut Self::Output {
+impl<S: cgmath::BaseNum, T> IndexMut<cgmath::Vector2<S>> for Grid<T> {
+    fn index_mut(&mut self, p: cgmath::Vector2<S>) -> &mut Self::Output {
         let size = self.size();
         match self.get_mut(p) {
             Some(t) => t,
@@ -515,34 +509,15 @@ impl<T> IndexMut<Point> for Grid<T> {
         }
     }
 }
-impl<'a, T> Index<&'a Point> for Grid<T> {
+impl<'a, S: cgmath::BaseNum, T> Index<&'a cgmath::Vector2<S>> for Grid<T> {
     type Output = T;
-    fn index(&self, p: &Point) -> &Self::Output {
+    fn index(&self, p: &cgmath::Vector2<S>) -> &Self::Output {
         &self[*p]
     }
 }
-impl<'a, T> IndexMut<&'a Point> for Grid<T> {
-    fn index_mut(&mut self, p: &Point) -> &mut Self::Output {
+impl<'a, S: cgmath::BaseNum, T> IndexMut<&'a cgmath::Vector2<S>> for Grid<T> {
+    fn index_mut(&mut self, p: &cgmath::Vector2<S>) -> &mut Self::Output {
         &mut self[*p]
-    }
-}
-
-impl<T> Index<(isize, isize)> for Grid<T> {
-    type Output = T;
-    fn index(&self, p: (isize, isize)) -> &Self::Output {
-        match self.map_bounds(p).and_then(|p| self.get(p)) {
-            Some(t) => t,
-            None => panic!("size is {:?} but index is {:?}", self.size(), p),
-        }
-    }
-}
-impl<T> IndexMut<(isize, isize)> for Grid<T> {
-    fn index_mut(&mut self, p: (isize, isize)) -> &mut Self::Output {
-        let size = self.size();
-        match self.map_bounds(p).and_then(move |p| self.get_mut(p)) {
-            Some(t) => t,
-            None => panic!("size is {:?} but index is {:?}", size, p),
-        }
     }
 }
 
