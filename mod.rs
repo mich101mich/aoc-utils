@@ -128,6 +128,46 @@ pub fn abs_diff<T: cgmath::BaseNum>(a: T, b: T) -> T {
     a.abs_diff(b)
 }
 
+#[derive(Debug, Clone, Copy, FromScanf)]
+pub enum Op {
+    #[sscanf("+")]
+    Add,
+    #[sscanf("-")]
+    Sub,
+    #[sscanf("*")]
+    Mul,
+    #[sscanf("/")]
+    Div,
+}
+impl Op {
+    pub fn apply<N: cgmath::BaseNum>(&self, a: N, b: N) -> N {
+        match self {
+            Op::Add => a + b,
+            Op::Sub => a - b,
+            Op::Mul => a * b,
+            Op::Div => a / b,
+        }
+    }
+    pub fn inverse_left<N: cgmath::BaseNum>(&self, lhs: N, out: N) -> N {
+        // out = lhs op <return>
+        match self {
+            Op::Add => out - lhs,
+            Op::Sub => lhs - out,
+            Op::Mul => out / lhs,
+            Op::Div => lhs / out,
+        }
+    }
+    pub fn inverse_right<N: cgmath::BaseNum>(&self, rhs: N, out: N) -> N {
+        // out = <return> op rhs
+        match self {
+            Op::Add => out - rhs,
+            Op::Sub => out + rhs,
+            Op::Mul => out / rhs,
+            Op::Div => out * rhs,
+        }
+    }
+}
+
 pub fn binary_search(start: usize, mut check: impl FnMut(usize) -> bool) -> usize {
     let mut min = start;
     let mut max = start;
