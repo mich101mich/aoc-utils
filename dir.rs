@@ -42,6 +42,13 @@ impl Dir {
     pub fn bounded_add(self, pos: Point, bounds: Point) -> Option<Point> {
         self.checked_add(pos).filter(|p| p.less_than(bounds))
     }
+    pub fn wrapping_add(self, pos: Point, bounds: Point) -> Point {
+        let delta = self.as_delta();
+        p2(
+            ((pos.x + bounds.x).saturating_add_signed(delta.x)) % bounds.x,
+            ((pos.y + bounds.y).saturating_add_signed(delta.y)) % bounds.y,
+        )
+    }
     pub fn from_difference(from: PointI, to: PointI) -> Dir {
         let diff = to - from;
         if diff.x.abs() > diff.y.abs() {

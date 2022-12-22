@@ -138,6 +138,9 @@ impl<T> Grid<T> {
     pub fn checked_move(&self, pos: Point, dir: Dir) -> Option<Point> {
         dir.bounded_add(pos, self.bounds())
     }
+    pub fn wrapping_move(&self, pos: Point, dir: Dir) -> Point {
+        dir.wrapping_add(pos, self.bounds())
+    }
     pub fn dir_iter(&self, start: Point, dir: Dir) -> impl Iterator<Item = Point> + '_ {
         std::iter::successors(self.checked_move(start, dir), move |&p| {
             self.checked_move(p, dir)
