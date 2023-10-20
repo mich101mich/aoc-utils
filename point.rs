@@ -12,6 +12,8 @@ pub trait PointExt<S: BaseNum> {
     fn less_than(self, other: Self) -> bool;
     fn manhattan(self, other: Self) -> S;
     fn moore(self, other: Self) -> S;
+    fn cwise_min(self, other: Self) -> Self;
+    fn cwise_max(self, other: Self) -> Self;
 }
 impl<S: BaseNum + Ord> PointExt<S> for cgmath::Vector2<S> {
     fn abs_diff(self, other: Self) -> Self {
@@ -26,6 +28,12 @@ impl<S: BaseNum + Ord> PointExt<S> for cgmath::Vector2<S> {
     fn moore(self, other: Self) -> S {
         let diff = self.abs_diff(other);
         diff.x.max(diff.y)
+    }
+    fn cwise_min(self, other: Self) -> Self {
+        Self::new(self.x.min(other.x), self.y.min(other.y))
+    }
+    fn cwise_max(self, other: Self) -> Self {
+        Self::new(self.x.max(other.x), self.y.max(other.y))
     }
 }
 
@@ -46,6 +54,20 @@ impl<S: BaseNum + Ord> PointExt<S> for cgmath::Vector3<S> {
     fn moore(self, other: Self) -> S {
         let diff = self.abs_diff(other);
         diff.x.max(diff.y).max(diff.z)
+    }
+    fn cwise_min(self, other: Self) -> Self {
+        Self::new(
+            self.x.min(other.x),
+            self.y.min(other.y),
+            self.z.min(other.z),
+        )
+    }
+    fn cwise_max(self, other: Self) -> Self {
+        Self::new(
+            self.x.max(other.x),
+            self.y.max(other.y),
+            self.z.max(other.z),
+        )
     }
 }
 
