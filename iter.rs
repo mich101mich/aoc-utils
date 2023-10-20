@@ -108,10 +108,11 @@ where
                 return Some(acc);
             }
             acc = (self.fold_op)(acc, x);
+            let predicate = &mut self.predicate;
             acc = self
                 .iter
                 .by_ref()
-                .take_while(|x| !(self.predicate)(x))
+                .take_while(|x| !predicate(x))
                 .fold(acc, &mut self.fold_op);
             Some(acc)
         } else {

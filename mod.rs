@@ -11,7 +11,7 @@ pub use cgmath::{prelude::*, vec2 as p2, vec3 as p3};
 pub use rand::prelude::*;
 pub use rayon::prelude::*;
 pub use regex::Regex;
-pub use sscanf::*;
+pub use sscanf::{sscanf, FromScanf, RegexRepresentation};
 
 mod dir;
 mod grid;
@@ -57,17 +57,15 @@ macro_rules! print_arr {
 }
 
 pub fn parse_u(input: &str) -> usize {
-    usize::from_str(input).unwrap_or_else(|_| panic!("cannot parse >{}<", input))
+    <usize as FromStr>::from_str(input).unwrap_or_else(|_| panic!("cannot parse >{}<", input))
 }
 pub fn parse(input: &str) -> isize {
-    isize::from_str(input).unwrap_or_else(|_| panic!("cannot parse >{}<", input))
+    <isize as FromStr>::from_str(input).unwrap_or_else(|_| panic!("cannot parse >{}<", input))
 }
 pub fn parse_c(input: char) -> usize {
-    if ('0'..='9').contains(&input) {
-        (input as u8 - b'0') as usize
-    } else {
-        panic!("{} is not a number", input)
-    }
+    input
+        .to_digit(10)
+        .unwrap_or_else(|| panic!("cannot parse >{}<", input)) as usize
 }
 
 pub fn comma_values<T: FromStr>(input: &str) -> Vec<T> {

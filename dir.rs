@@ -114,12 +114,14 @@ macro_rules! impl_dir_ops {
                 *self = *self + other;
             }
         }
+        #[allow(clippy::suspicious_arithmetic_impl)]
         impl Sub<Dir> for cgmath::Vector2<$type> {
             type Output = Self;
             fn sub(self, other: Dir) -> Self {
                 self + other.opposite()
             }
         }
+        #[allow(clippy::suspicious_op_assign_impl)]
         impl SubAssign<Dir> for cgmath::Vector2<$type> {
             fn sub_assign(&mut self, other: Dir) {
                 *self += other.opposite();
@@ -242,12 +244,14 @@ macro_rules! impl_dir_ops_3d {
                 *self = *self + other;
             }
         }
+        #[allow(clippy::suspicious_arithmetic_impl)]
         impl Sub<Dir3D> for cgmath::Vector3<$type> {
             type Output = Self;
             fn sub(self, other: Dir3D) -> Self {
                 self + other.opposite()
             }
         }
+        #[allow(clippy::suspicious_op_assign_impl)]
         impl SubAssign<Dir3D> for cgmath::Vector3<$type> {
             fn sub_assign(&mut self, other: Dir3D) {
                 *self += other.opposite();

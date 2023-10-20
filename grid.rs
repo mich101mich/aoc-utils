@@ -371,7 +371,7 @@ impl<T> Grid<T> {
         } else {
             self.0.two_muts(a.y, b.y).and_then(|(ra, rb)| {
                 ra.get_mut(a.x)
-                    .and_then(|a| rb.get_mut(b.x).map(|b| (a, b)))
+                    .and_then(move |a| rb.get_mut(b.x).map(|b| (a, b)))
             })
         }
     }
@@ -550,7 +550,7 @@ impl<T> DerefMut for Grid<T> {
 
 #[derive(Debug, Clone, FromScanf)]
 #[sscanf(format = "{:/[.#]+/}")]
-struct HashtagLine(#[sscanf(map = |s: &str| dotted_line(s, '#'))] pub Vec<bool>);
+pub struct HashtagLine(#[sscanf(map = |s: &str| dotted_line(s, '#'))] pub Vec<bool>);
 
 impl Deref for HashtagLine {
     type Target = Vec<bool>;
