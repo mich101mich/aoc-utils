@@ -165,6 +165,57 @@ impl Op {
         }
     }
 }
+impl std::fmt::Display for Op {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Op::Add => write!(f, "+"),
+            Op::Sub => write!(f, "-"),
+            Op::Mul => write!(f, "*"),
+            Op::Div => write!(f, "/"),
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy, FromScanf)]
+pub enum Comp {
+    #[sscanf("==")]
+    Eq,
+    #[sscanf("!=")]
+    Ne,
+    #[sscanf("<")]
+    Lt,
+    #[sscanf("<=")]
+    Le,
+    #[sscanf(">")]
+    Gt,
+    #[sscanf(">=")]
+    Ge,
+}
+
+impl Comp {
+    pub fn apply<N: cgmath::BaseNum>(&self, a: N, b: N) -> bool {
+        match self {
+            Comp::Eq => a == b,
+            Comp::Ne => a != b,
+            Comp::Lt => a < b,
+            Comp::Le => a <= b,
+            Comp::Gt => a > b,
+            Comp::Ge => a >= b,
+        }
+    }
+}
+impl std::fmt::Display for Comp {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Comp::Eq => write!(f, "=="),
+            Comp::Ne => write!(f, "!="),
+            Comp::Lt => write!(f, "<"),
+            Comp::Le => write!(f, "<="),
+            Comp::Gt => write!(f, ">"),
+            Comp::Ge => write!(f, ">="),
+        }
+    }
+}
 
 pub fn binary_search(start: usize, mut check: impl FnMut(usize) -> bool) -> usize {
     let mut min = start;
