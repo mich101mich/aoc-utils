@@ -14,6 +14,15 @@ pub enum Dir {
 pub use Dir::*;
 
 impl Dir {
+    pub fn from_char(c: char) -> Option<Self> {
+        match c.to_ascii_lowercase() {
+            'u' | '^' | 'n' => Some(Up),
+            'r' | '>' | 'e' => Some(Right),
+            'd' | 'v' | 's' => Some(Down),
+            'l' | '<' | 'w' => Some(Left),
+            _ => None,
+        }
+    }
     pub fn clockwise(self) -> Dir {
         ((self as u8 + 1) % 4).into()
     }
