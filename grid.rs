@@ -565,6 +565,15 @@ pub fn hashtag_line(input: &str) -> Vec<bool> {
 pub fn dotted_line(input: &str, non_dot: char) -> Vec<bool> {
     input.chars().map(|c| c == non_dot).to_vec()
 }
+pub fn char_line(input: &str) -> Vec<char> {
+    input.chars().to_vec()
+}
+pub fn byte_line(input: &str) -> Vec<u8> {
+    input.bytes().to_vec()
+}
+pub fn digit_line(input: &str) -> Vec<usize> {
+    input.bytes().map(|n| (n - b'0') as usize).to_vec()
+}
 pub fn hashtag_grid(input: &str) -> Grid<bool> {
     dotted_grid(input, '#')
 }
@@ -576,25 +585,13 @@ pub fn dotted_grid(input: &str, non_dot: char) -> Grid<bool> {
         .into()
 }
 pub fn char_grid(input: &str) -> Grid<char> {
-    input
-        .lines()
-        .map(|line| line.chars().to_vec())
-        .to_vec()
-        .into()
+    input.lines().map(char_line).to_vec().into()
 }
 pub fn byte_grid(input: &str) -> Grid<u8> {
-    input
-        .lines()
-        .map(|line| line.bytes().to_vec())
-        .to_vec()
-        .into()
+    input.lines().map(byte_line).to_vec().into()
 }
 pub fn digit_grid(input: &str) -> Grid<usize> {
-    input
-        .lines()
-        .map(|line| line.bytes().map(|n| (n - b'0') as usize).to_vec())
-        .to_vec()
-        .into()
+    input.lines().map(digit_line).to_vec().into()
 }
 pub fn number_grid_whitespace<'a>(mut input: impl Iterator<Item = &'a str>) -> Grid<isize> {
     input

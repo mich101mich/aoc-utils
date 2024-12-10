@@ -56,6 +56,21 @@ macro_rules! print_arr {
     };
 }
 
+pub fn copy(out: impl std::fmt::Debug) {
+    use copypasta::ClipboardProvider;
+    copypasta::ClipboardContext::new()
+        .unwrap()
+        .set_contents(format!("{:?}", out))
+        .unwrap()
+}
+
+macro_rules! result {
+    ($var: ident) => {
+        pv!($var);
+        crate::utils::copy($var);
+    };
+}
+
 pub fn parse_u(input: &str) -> usize {
     <usize as FromStr>::from_str(input).unwrap_or_else(|_| panic!("cannot parse >{}<", input))
 }
