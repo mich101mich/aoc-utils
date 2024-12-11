@@ -65,7 +65,7 @@ pub fn copy(out: impl std::fmt::Debug) {
 }
 
 macro_rules! result {
-    ($var: ident) => {
+    ($var: expr) => {
         pv!($var);
         crate::utils::copy($var);
     };
