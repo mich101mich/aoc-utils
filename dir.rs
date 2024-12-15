@@ -11,6 +11,7 @@ pub enum Dir {
     #[sscanf(r"(?i:left|[lw<])")]
     Left,
 }
+use cgmath::BaseNum;
 pub use Dir::*;
 
 impl Dir {
@@ -23,6 +24,29 @@ impl Dir {
             _ => None,
         }
     }
+    pub fn from_difference(from: PointI, to: PointI) -> Dir {
+        let diff = to - from;
+        if diff.x.abs() > diff.y.abs() {
+            if diff.x > 0 {
+                Dir::Right
+            } else {
+                Dir::Left
+            }
+        } else if diff.y > 0 {
+            Dir::Down
+        } else {
+            Dir::Up
+        }
+    }
+
+    pub fn all() -> std::iter::Copied<std::slice::Iter<'static, Dir>> {
+        [Up, Right, Down, Left].iter().copied()
+    }
+
+    pub fn num(self) -> usize {
+        self.into()
+    }
+
     pub fn clockwise(self) -> Dir {
         ((self as u8 + 1) % 4).into()
     }
@@ -32,15 +56,14 @@ impl Dir {
     pub fn opposite(self) -> Dir {
         ((self as u8 + 2) % 4).into()
     }
-    pub fn num(self) -> usize {
-        self.into()
+
+    pub fn is_vertical(&self) -> bool {
+        matches!(self, Up | Down)
     }
-    pub fn all() -> std::iter::Copied<std::slice::Iter<'static, Dir>> {
-        [Up, Right, Down, Left].iter().copied()
+    pub fn is_horizontal(&self) -> bool {
+        !self.is_vertical()
     }
-    pub fn as_delta(self) -> PointI {
-        [p2(0, -1), p2(1, 0), p2(0, 1), p2(-1, 0)][self as usize]
-    }
+
     pub fn checked_add(self, pos: Point) -> Option<Point> {
         let delta = self.as_delta();
         Some(p2(
@@ -58,19 +81,30 @@ impl Dir {
             ((pos.y + bounds.y).saturating_add_signed(delta.y)) % bounds.y,
         )
     }
-    pub fn from_difference(from: PointI, to: PointI) -> Dir {
-        let diff = to - from;
-        if diff.x.abs() > diff.y.abs() {
-            if diff.x > 0 {
-                Dir::Right
-            } else {
-                Dir::Left
-            }
-        } else if diff.y > 0 {
-            Dir::Down
-        } else {
-            Dir::Up
-        }
+
+    pub fn checked_step<S: BaseNum>(self, pos: Point, steps: S) -> Option<Point> {
+        let delta = self.as_delta() * num::cast::<S, isize>(steps)?;
+        Some(p2(
+            pos.x.checked_add_signed(delta.x)?,
+            pos.y.checked_add_signed(delta.y)?,
+        ))
+    }
+    pub fn bounded_step<S: BaseNum>(self, pos: Point, bounds: Point, steps: S) -> Option<Point> {
+        self.checked_step(pos, steps)
+            .filter(|p| p.less_than(bounds))
+    }
+    pub fn wrapping_step<S: BaseNum>(self, pos: Point, bounds: Point, steps: S) -> Point {
+        let ret =
+            pos.cast::<isize>().unwrap() + self.as_delta() * num::cast::<S, isize>(steps).unwrap();
+        let bounds = bounds.cast::<isize>().unwrap();
+        p2(
+            ((ret.x % bounds.x + bounds.x) % bounds.x) as usize,
+            ((ret.y % bounds.y + bounds.y) % bounds.y) as usize,
+        )
+    }
+
+    pub fn as_delta(self) -> PointI {
+        [p2(0, -1), p2(1, 0), p2(0, 1), p2(-1, 0)][self as usize]
     }
     pub fn to_char(self) -> char {
         ['U', 'R', 'D', 'L'][self as usize]
@@ -80,13 +114,6 @@ impl Dir {
     }
     pub fn to_char_cardinal(self) -> char {
         ['N', 'E', 'S', 'W'][self as usize]
-    }
-
-    pub fn is_vertical(&self) -> bool {
-        matches!(self, Up | Down)
-    }
-    pub fn is_horizontal(&self) -> bool {
-        !self.is_vertical()
     }
 }
 
