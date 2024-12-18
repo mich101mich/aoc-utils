@@ -56,18 +56,27 @@ macro_rules! print_arr {
     };
 }
 
-pub fn copy(out: impl std::fmt::Debug) {
+pub fn copy(out: String) {
     use copypasta::ClipboardProvider;
     copypasta::ClipboardContext::new()
         .unwrap()
-        .set_contents(format!("{:?}", out))
+        .set_contents(out)
         .unwrap()
 }
 
 macro_rules! result {
     ($var: expr) => {
-        pv!($var);
-        crate::utils::copy($var);
+        let mut s = format!("{:?}", $var);
+        if s.starts_with('"') && s.ends_with('"') {
+            s = s[1..s.len() - 1].to_string();
+        }
+        println!("result: {}", s);
+        crate::utils::copy(s);
+    };
+    ($format: literal, $($args: expr),+) => {
+        let s = format!($format, $($args),+);
+        println!("result: {}", s);
+        crate::utils::copy(s);
     };
 }
 
@@ -232,45 +241,58 @@ impl std::fmt::Display for Comp {
     }
 }
 
-pub fn binary_search(start: usize, mut check: impl FnMut(usize) -> bool) -> usize {
-    let mut min = start;
-    let mut max = start;
-    loop {
-        if check(max) {
-            break;
+pub fn binary_search(
+    mut lower: usize,
+    upper: impl Into<Option<usize>>,
+    mut is_less_than: impl FnMut(usize) -> bool,
+) -> usize {
+    let mut upper = if let Some(upper) = upper.into() {
+        upper
+    } else {
+        let mut candidate = lower + 1;
+        while !is_less_than(candidate) {
+            lower = candidate;
+            candidate = (candidate + 1) * 2;
         }
-        min = max;
-        max = (max + 1) * 2;
-    }
-    while max - min > 1 {
-        let mid = (max + min) / 2;
-        if check(mid) {
-            max = mid;
+        candidate
+    };
+
+    while upper - lower > 1 {
+        let mid = lower + (upper - lower) / 2;
+        if is_less_than(mid) {
+            upper = mid;
         } else {
-            min = mid;
+            lower = mid;
         }
     }
-    max
+    lower
 }
-pub fn binary_search_i(start: isize, mut check: impl FnMut(isize) -> bool) -> isize {
-    let mut min = start;
-    let mut max = start;
-    loop {
-        if check(max) {
-            break;
+
+pub fn binary_search_i(
+    mut lower: isize,
+    upper: impl Into<Option<isize>>,
+    mut is_less_than: impl FnMut(isize) -> bool,
+) -> isize {
+    let mut upper = if let Some(upper) = upper.into() {
+        upper
+    } else {
+        let mut candidate = (lower + 1).max(0);
+        while !is_less_than(candidate) {
+            lower = candidate;
+            candidate = (candidate + 1) * 2;
         }
-        min = max;
-        max = (max + 1) * 2;
-    }
-    while max - min > 1 {
-        let mid = (max + min) / 2;
-        if check(mid) {
-            max = mid;
+        candidate
+    };
+
+    while upper - lower > 1 {
+        let mid = lower + (upper - lower) / 2;
+        if is_less_than(mid) {
+            upper = mid;
         } else {
-            min = mid;
+            lower = mid;
         }
     }
-    max
+    lower
 }
 
 pub fn detect_loop<T: Hash + std::cmp::Eq>(total_iterations: u128, mut f: impl FnMut() -> T) -> T {
