@@ -66,13 +66,13 @@ impl<'b, Id> IntoIdCost<Id> for (Id, &'b Cost) {
 }
 
 #[derive(PartialEq, Eq)]
-struct Element<Id> {
-    id: Id,
-    cost: Cost,
-    total_heuristic: Cost,
+pub struct Element<Id> {
+    pub id: Id,
+    pub cost: Cost,
+    pub total_heuristic: Cost,
 }
 impl<Id> Element<Id> {
-    fn new(id: Id, cost: Cost, heuristic: Cost) -> Element<Id> {
+    pub fn new(id: Id, cost: Cost, heuristic: Cost) -> Element<Id> {
         Element {
             id,
             cost,
@@ -91,16 +91,16 @@ impl<Id: Eq> Ord for Element<Id> {
     }
 }
 
-struct Visited<Id>(HashMap<Id, (Cost, Id)>);
+pub struct Visited<Id>(HashMap<Id, (Cost, Id)>);
 
 impl<Id> Visited<Id>
 where
     Id: Copy + Eq + Hash,
 {
-    fn new() -> Self {
+    pub fn new() -> Self {
         Visited(HashMap::new())
     }
-    fn update(&mut self, id: Id, cost: Cost, prev: Id) -> bool {
+    pub fn update(&mut self, id: Id, cost: Cost, prev: Id) -> bool {
         match self.0.entry(id) {
             Entry::Occupied(mut entry) => {
                 if entry.get().0 <= cost {
@@ -116,17 +116,17 @@ where
             }
         }
     }
-    fn get(&self, id: Id) -> Option<(Cost, Id)> {
+    pub fn get(&self, id: Id) -> Option<(Cost, Id)> {
         self.0.get(&id).copied()
     }
-    fn cost(&self, id: Id) -> Option<Cost> {
+    pub fn cost(&self, id: Id) -> Option<Cost> {
         self.0.get(&id).map(|(cost, _)| *cost)
     }
-    fn prev(&self, id: Id) -> Option<Id> {
+    pub fn prev(&self, id: Id) -> Option<Id> {
         self.0.get(&id).map(|(_, prev)| *prev)
     }
 
-    fn path(&self, start: Id, goal: Id) -> Option<Path<Id>> {
+    pub fn path(&self, start: Id, goal: Id) -> Option<Path<Id>> {
         let cost = self.cost(goal)?;
 
         let mut steps = vec![];

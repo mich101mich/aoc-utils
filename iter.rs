@@ -166,7 +166,7 @@ pub fn manhattan_ring_iter(center: PointI, radius: isize) -> ManhattanRingIterat
     ManhattanRingIterator {
         center,
         radius,
-        current: Some(p2(center.x, center.y - radius)),
+        next_value: Some(p2(center.x, center.y - radius)),
         side: Dir::Up,
     }
 }
@@ -174,7 +174,7 @@ pub fn manhattan_ring_iter(center: PointI, radius: isize) -> ManhattanRingIterat
 pub struct ManhattanRingIterator {
     center: PointI,
     radius: isize,
-    current: Option<PointI>,
+    next_value: Option<PointI>,
     side: Dir,
 }
 
@@ -182,7 +182,8 @@ impl Iterator for ManhattanRingIterator {
     type Item = PointI;
 
     fn next(&mut self) -> Option<Self::Item> {
-        let mut current = self.current?;
+        let mut next_value = self.next_value?;
+        let ret = next_value;
 
         let (delta, target) = match self.side {
             Dir::Up => (p2(1, 1), p2(self.center.x + self.radius, self.center.y)),
@@ -191,16 +192,15 @@ impl Iterator for ManhattanRingIterator {
             Dir::Left => (p2(1, -1), p2(self.center.x, self.center.y - self.radius)),
         };
 
-        current += delta;
-        if current == target {
+        next_value += delta;
+        self.next_value = Some(next_value);
+        if next_value == target {
             self.side = self.side.clockwise();
             if self.side == Dir::Up {
-                self.current = None;
-                return None;
+                self.next_value = None;
             }
         }
-        self.current = Some(current);
-        Some(current)
+        Some(ret)
     }
 }
 
@@ -269,5 +269,28 @@ impl Iterator for SquareRingDeltaIterator {
 
     fn next(&mut self) -> Option<Self::Item> {
         self.0.next().map(|pos| pos - self.0.center)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn manhattan_ring_iter_test() {
+        let center = p2(10, 10);
+        let radius = 2;
+        let points = manhattan_ring_iter(center, radius).to_vec();
+        let expected = vec![
+            p2(10, 8),
+            p2(11, 9),
+            p2(12, 10),
+            p2(11, 11),
+            p2(10, 12),
+            p2(9, 11),
+            p2(8, 10),
+            p2(9, 9),
+        ];
+        assert_eq!(points, expected);
     }
 }
