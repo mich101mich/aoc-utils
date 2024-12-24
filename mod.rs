@@ -2,7 +2,9 @@
 #![allow(clippy::wrong_self_convention)]
 
 pub use std::cmp::Ordering;
-pub use std::collections::{hash_map::Entry, BinaryHeap, HashMap, HashSet, VecDeque};
+pub use std::collections::{
+    hash_map::Entry, BTreeMap, BTreeSet, BinaryHeap, HashMap, HashSet, VecDeque,
+};
 pub use std::convert::{TryFrom, TryInto};
 pub use std::io::{BufRead, BufReader, BufWriter, Read, Write};
 pub use std::str::FromStr;
@@ -13,6 +15,7 @@ pub use rayon::prelude::*;
 pub use regex::Regex;
 pub use sscanf::{sscanf, FromScanf, RegexRepresentation};
 
+mod collection;
 mod dir;
 mod grid;
 mod int_code;
@@ -21,6 +24,7 @@ mod neighbors;
 mod path;
 mod point;
 
+pub use collection::*;
 pub use dir::*;
 pub use grid::*;
 pub use int_code::*;

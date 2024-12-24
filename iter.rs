@@ -64,14 +64,34 @@ impl<T: Hash + Eq, I: Iterator<Item = T>> IterHashExt<T> for I {
         self.collect()
     }
 }
-pub trait IterMapExt<K: Hash + Eq, V> {
+
+pub trait IterOrdExt<T: PartialOrd + Eq> {
+    fn to_ord_set(self) -> BTreeSet<T>;
+}
+impl<T: Ord + Eq, I: Iterator<Item = T>> IterOrdExt<T> for I {
+    fn to_ord_set(self) -> BTreeSet<T> {
+        self.collect()
+    }
+}
+
+pub trait IterHashMapExt<K: Hash + Eq, V> {
     fn to_map(self) -> HashMap<K, V>;
 }
-impl<K: Hash + Eq, V, I: Iterator<Item = (K, V)>> IterMapExt<K, V> for I {
+impl<K: Hash + Eq, V, I: Iterator<Item = (K, V)>> IterHashMapExt<K, V> for I {
     fn to_map(self) -> HashMap<K, V> {
         self.collect()
     }
 }
+
+pub trait IterOrdMapExt<K: Ord + Eq, V> {
+    fn to_ord_map(self) -> BTreeMap<K, V>;
+}
+impl<K: Ord + Eq, V, I: Iterator<Item = (K, V)>> IterOrdMapExt<K, V> for I {
+    fn to_ord_map(self) -> BTreeMap<K, V> {
+        self.collect()
+    }
+}
+
 pub trait IterStringExt {
     fn to_string(self) -> String;
 }
