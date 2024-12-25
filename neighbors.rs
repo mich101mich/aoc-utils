@@ -14,10 +14,8 @@ use super::*;
 /// a goal from a Point.
 ///
 /// The most common implementations of this Trait are already provided by this Module:
-/// - [`ManhattanNeighborhood`] for Agents that can move
-/// up, down, left or right
-/// - [`MooreNeighborhood`] for Agents that can move
-/// up, down, left, right, as well as the 4 diagonals (up-right, ...)
+/// - [`ManhattanNeighborhood`] for Agents that can move up, down, left or right
+/// - [`MooreNeighborhood`] for Agents that can move up, down, left, right, as well as the 4 diagonals (up-right, ...)
 pub trait Neighborhood: Clone + std::fmt::Debug {
     /// Provides a list of Neighbors of a Point
     ///

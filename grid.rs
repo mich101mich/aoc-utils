@@ -73,16 +73,16 @@ impl<T> Grid<T> {
     }
 
     pub fn w(&self) -> usize {
-        self.0.get(0).map(|v| v.len()).unwrap_or(0)
+        self.0.first().map(|v| v.len()).unwrap_or(0)
     }
     pub fn h(&self) -> usize {
         self.len()
     }
-    pub fn size(&self) -> Point {
-        p2(self.w(), self.h())
+    pub fn size(&self) -> (usize, usize) {
+        (self.w(), self.h())
     }
     pub fn bounds(&self) -> Point {
-        self.size()
+        p2(self.w(), self.h())
     }
 
     pub fn in_bounds<S: cgmath::BaseNum>(&self, p: cgmath::Vector2<S>) -> bool {
@@ -512,13 +512,13 @@ impl<S: cgmath::BaseNum, T> IndexMut<cgmath::Vector2<S>> for Grid<T> {
         }
     }
 }
-impl<'a, S: cgmath::BaseNum, T> Index<&'a cgmath::Vector2<S>> for Grid<T> {
+impl<S: cgmath::BaseNum, T> Index<&cgmath::Vector2<S>> for Grid<T> {
     type Output = T;
     fn index(&self, p: &cgmath::Vector2<S>) -> &Self::Output {
         &self[*p]
     }
 }
-impl<'a, S: cgmath::BaseNum, T> IndexMut<&'a cgmath::Vector2<S>> for Grid<T> {
+impl<S: cgmath::BaseNum, T> IndexMut<&cgmath::Vector2<S>> for Grid<T> {
     fn index_mut(&mut self, p: &cgmath::Vector2<S>) -> &mut Self::Output {
         &mut self[*p]
     }

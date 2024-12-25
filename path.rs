@@ -44,22 +44,22 @@ impl<Id> IntoIdCost<Id> for (Id, Cost) {
         self
     }
 }
-impl<'a, Id: Copy> IntoIdCost<Id> for &'a (Id, Cost) {
+impl<Id: Copy> IntoIdCost<Id> for &(Id, Cost) {
     fn into_id_cost(self) -> (Id, Cost) {
         *self
     }
 }
-impl<'a, 'b, Id: Copy> IntoIdCost<Id> for (&'a Id, &'b Cost) {
+impl<Id: Copy> IntoIdCost<Id> for (&Id, &Cost) {
     fn into_id_cost(self) -> (Id, Cost) {
         (*self.0, *self.1)
     }
 }
-impl<'a, Id: Copy> IntoIdCost<Id> for (&'a Id, Cost) {
+impl<Id: Copy> IntoIdCost<Id> for (&Id, Cost) {
     fn into_id_cost(self) -> (Id, Cost) {
         (*self.0, self.1)
     }
 }
-impl<'b, Id> IntoIdCost<Id> for (Id, &'b Cost) {
+impl<Id> IntoIdCost<Id> for (Id, &Cost) {
     fn into_id_cost(self) -> (Id, Cost) {
         (self.0, *self.1)
     }
