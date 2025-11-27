@@ -94,7 +94,7 @@ impl<T> Grid<T> {
 
     pub fn grid_index_iter(&self) -> impl Iterator<Item = Point> {
         let size = self.bounds();
-        (0..size.y).flat_map(move |x| (0..size.x).map(move |y| p2(x, y)))
+        (0..size.y).flat_map(move |y| (0..size.x).map(move |x| p2(x, y)))
     }
     pub fn grid_iter(&self) -> impl Iterator<Item = &T> {
         self.0.iter().flat_map(|r| r.iter())

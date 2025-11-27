@@ -3,7 +3,7 @@
 
 pub use std::cmp::Ordering;
 pub use std::collections::{
-    hash_map::Entry, BTreeMap, BTreeSet, BinaryHeap, HashMap, HashSet, VecDeque,
+    BTreeMap, BTreeSet, BinaryHeap, HashMap, HashSet, VecDeque, hash_map::Entry,
 };
 pub use std::convert::{TryFrom, TryInto};
 pub use std::io::{BufRead, BufReader, BufWriter, Read, Write};
@@ -13,7 +13,7 @@ pub use cgmath::{prelude::*, vec2 as p2, vec3 as p3};
 pub use rand::prelude::*;
 pub use rayon::prelude::*;
 pub use regex::Regex;
-pub use sscanf::{sscanf, FromScanf, RegexRepresentation};
+pub use sscanf::{FromScanf, RegexRepresentation, sscanf};
 
 mod collection;
 mod dir;
@@ -45,7 +45,7 @@ macro_rules! pv {
         let mut s = format!("{}: {:?}", stringify!($start), $start);
         $(
             s += &format!(",  {}: {:?}", stringify!($var), $var);
-        );*
+        )*
         println!("{}", s);
     };
 }

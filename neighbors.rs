@@ -65,16 +65,8 @@ impl Neighborhood for ManhattanNeighborhood {
         Box::new(super::Dir::all().filter_map(move |d| d.bounded_add(point, bounds)))
     }
     fn heuristic(&self, point: Point, goal: Point) -> usize {
-        let diff_0 = if goal.x > point.x {
-            goal.x - point.x
-        } else {
-            point.x - goal.x
-        };
-        let diff_1 = if goal.y > point.y {
-            goal.y - point.y
-        } else {
-            point.y - goal.y
-        };
+        let diff_0 = goal.x.abs_diff(point.x);
+        let diff_1 = goal.y.abs_diff(point.y);
         diff_0 + diff_1
     }
 }
@@ -133,16 +125,8 @@ impl Neighborhood for MooreNeighborhood {
         Box::new(iter)
     }
     fn heuristic(&self, point: Point, goal: Point) -> usize {
-        let diff_0 = if goal.x > point.x {
-            goal.x - point.x
-        } else {
-            point.x - goal.x
-        };
-        let diff_1 = if goal.y > point.y {
-            goal.y - point.y
-        } else {
-            point.y - goal.y
-        };
+        let diff_0 = goal.x.abs_diff(point.x);
+        let diff_1 = goal.y.abs_diff(point.y);
         diff_0.max(diff_1)
     }
 }
