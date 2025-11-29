@@ -301,65 +301,47 @@ impl<T> Grid<T> {
         )
     }
 
-    pub fn rotate_counter_clockwise(&mut self) {
-        if self.is_empty() {
-            return;
-        }
-        assert_eq!(self.w(), self.h());
-        let w = self.w();
-        for i in 0..w {
+    pub fn transpose(&mut self) {
+        let (w, h) = self.size();
+        // first, transpose the square section in the middle
+        let s = w.min(h);
+        for i in 0..s {
             let (row, rest) = self.0[i..].split_at_mut(1);
-            row[0][i + 1..]
-                .iter_mut()
-                .zip(rest.iter_mut().map(|r| &mut r[i]))
-                .for_each(|(a, b)| std::mem::swap(a, b));
+            for (a, b) in row[0][i + 1..].iter_mut().zip(rest) {
+                std::mem::swap(a, &mut b[i])
+            }
         }
+
+        if w > h {
+            // We have elements protruding on the right that need to be moved to the bottom
+            self.resize_with(w, || Vec::with_capacity(h));
+
+            let (current, added) = self.0.split_at_mut(h);
+            for row in current {
+                for (out, x) in added.iter_mut().zip(row.drain(h..)) {
+                    out.push(x)
+                }
+            }
+        }
+        if h > w {
+            // We have elements protruding at the bottom that need to be moved to the right
+            let (current, removed) = self.0.split_at_mut(w);
+            for row in current.iter_mut().rev() {
+                row.extend(removed.iter_mut().map(|r| r.pop().unwrap()));
+            }
+            self.truncate(w);
+        }
+    }
+
+    pub fn rotate_counter_clockwise(&mut self) {
+        // rotate an array: swap x and y, flip one side
+        self.transpose();
         self.reverse();
     }
     pub fn rotate_clockwise(&mut self) {
-        if self.is_empty() {
-            return;
-        }
-        assert_eq!(self.w(), self.h());
-        let w = self.w();
-
-        // rotate an array: swap x and y, flip one side
+        // rotate an array the other way: flip one side, swap x and y
         self.reverse();
-        for i in 0..w {
-            let (row, rest) = self.0[i..].split_at_mut(1);
-            row[0][i + 1..]
-                .iter_mut()
-                .zip(rest.iter_mut().map(|r| &mut r[i]))
-                .for_each(|(a, b)| std::mem::swap(a, b));
-        }
-
-        // // Rotates a Square in-place
-        // //
-        // // draws an upside down triangle on the grid:
-        // //     0(1 2 3)
-        // //     4 5(6)7
-        // //     8 9 A B
-        // //     C D E F
-        // // And swap-rotates each element in the triangle with the corresponding positions
-        // // in the rotated versions of the triangle
-        // // example:
-        // //  1 - 7 - E - 8 - 1
-        // // swaps:
-        // // (7 - 1)- E - 8
-        // //  7 -(E - 1)- 8
-        // //  7 - E -(8 - 1)
-        // // result:
-        // //  7 - E - 8 - 1
-        // for i in 0..w / 2 {
-        //     for j in i + 1..w - i {
-        //         let mut a = (j, i);
-        //         for _ in 0..3 {
-        //             let b = (a.1, w - a.0 - 1);
-        //             self.swap(a, b);
-        //             a = b;
-        //         }
-        //     }
-        // }
+        self.transpose();
     }
 
     #[allow(clippy::needless_lifetimes)]
