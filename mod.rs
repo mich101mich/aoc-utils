@@ -13,7 +13,7 @@ pub use cgmath::{prelude::*, vec2 as p2, vec3 as p3};
 pub use rand::prelude::*;
 pub use rayon::prelude::*;
 pub use regex::Regex;
-pub use sscanf::{FromScanf, RegexRepresentation, sscanf};
+pub use sscanf::{FromScanf, sscanf};
 
 mod collection;
 mod dir;
