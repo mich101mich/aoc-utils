@@ -332,6 +332,20 @@ impl<T> Grid<T> {
             self.truncate(w);
         }
     }
+    pub fn transposed(&self) -> Self
+    where
+        T: Clone,
+    {
+        let (w, h) = self.size();
+        let mut ret = Self::new();
+        ret.resize_with(w, || Vec::with_capacity(h));
+
+        for (i, out_row) in ret.iter_mut().enumerate() {
+            out_row.extend(self.col(i).cloned());
+        }
+
+        ret
+    }
 
     pub fn rotate_counter_clockwise(&mut self) {
         // rotate an array: swap x and y, flip one side
