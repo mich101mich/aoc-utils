@@ -84,6 +84,12 @@ macro_rules! result {
     };
 }
 
+macro_rules! swap {
+    ($a:expr, $b:expr) => {
+        std::mem::swap(&mut $a, &mut $b)
+    };
+}
+
 pub fn parse_u(input: &str) -> usize {
     <usize as FromStr>::from_str(input).unwrap_or_else(|_| panic!("cannot parse >{}<", input))
 }
