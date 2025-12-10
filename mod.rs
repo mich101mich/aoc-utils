@@ -111,16 +111,23 @@ pub fn comma_values<T: FromStr>(input: &str) -> Vec<T> {
 
 pub trait SliceExt {
     type Item;
+
+    /// Returns two mutable references to the two indices
     #[allow(clippy::needless_lifetimes)]
     fn two_muts<'a>(
         &'a mut self,
         a: usize,
         b: usize,
     ) -> Option<(&'a mut Self::Item, &'a mut Self::Item)>;
+
+    /// Partitions the slice in-place such that the predicate holds `true` for all elements in the first slice
+    /// and `false` for all elements in the second slice.
+    fn partition_unstable(&mut self, predicate: impl FnMut(&Self::Item) -> bool) -> (&Self, &Self);
 }
 
 impl<T> SliceExt for [T] {
     type Item = T;
+
     #[allow(clippy::needless_lifetimes)]
     fn two_muts<'a>(
         &'a mut self,
@@ -140,6 +147,34 @@ impl<T> SliceExt for [T] {
         } else {
             None
         }
+    }
+
+    fn partition_unstable(
+        &mut self,
+        mut predicate: impl FnMut(&Self::Item) -> bool,
+    ) -> (&Self, &Self) {
+        if self.is_empty() {
+            return (&[], &[]);
+        }
+        let (mut left, mut right) = (0, self.len() - 1);
+        loop {
+            while left <= right && predicate(&self[left]) {
+                left += 1;
+            }
+            if left > right {
+                break;
+            }
+            while !predicate(&self[right]) {
+                right -= 1;
+            }
+            if left > right {
+                break;
+            }
+            self.swap(left, right);
+            left += 1;
+            right -= 1;
+        }
+        self.split_at(left)
     }
 }
 
