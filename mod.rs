@@ -17,6 +17,7 @@ pub use sscanf::{FromScanf, sscanf};
 
 mod collection;
 mod dir;
+mod fraction;
 mod grid;
 mod int_code;
 mod iter;
@@ -26,6 +27,7 @@ mod point;
 
 pub use collection::*;
 pub use dir::*;
+pub use fraction::*;
 pub use grid::*;
 pub use int_code::*;
 pub use iter::*;
